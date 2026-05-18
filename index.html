@@ -993,39 +993,57 @@
             `;
             listContainer.appendChild(btn);
         }
+    }
 
-        // 重新渲染 Chart.js 熟練度雷達圖
+    function renderMasteryChart() {
         const ctx = document.getElementById('masteryChart');
-        if (ctx) {
-            if (chartInstance) chartInstance.destroy();
-            chartInstance = new Chart(ctx.getContext('2d'), {
-                type: 'radar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: '各科精熟百分比 (%)',
-                        data: masteryCounts,
-                        backgroundColor: 'rgba(0, 95, 153, 0.15)',
-                        borderColor: '#005f99',
-                        pointBackgroundColor: '#ffcc00',
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        r: {
-                            min: 0,
-                            max: 100,
-                            ticks: { display: false },
-                            grid: { color: 'rgba(0,0,0,0.08)' }
-                        }
-                    },
-                    plugins: { legend: { display: false } }
-                }
-            });
+        if (!ctx) return;
+        const labels = Object.keys(SUBJECT_NAMES).map(key => SUBJECT_NAMES[key]);
+        const dataValues = Object.keys(SUBJECT_NAMES).map(key => {
+            const totalInSub = db.filter(item => item.subject === key).length || 1;
+            const masteredCount = (masteryData[key] || []).length;
+            return Math.round((masteredCount / totalInSub) * 100);
+        });
+
+        if (chartInstance) {
+            chartInstance.destroy();
         }
+
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+        chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '熟練度百分比 (%)',
+                    data: dataValues,
+                    backgroundColor: 'rgba(0, 95, 153, 0.6)',
+                    borderColor: 'rgba(0, 95, 153, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { 
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { 
+                        beginAtZero: true, 
+                        max: 100,
+                        grid: { color: isDark ? '#333' : '#eee' },
+                        ticks: { color: isDark ? '#aaa' : '#666' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: isDark ? '#aaa' : '#333', font: { size: 11 } }
+                    }
+                }
+            }
+        });
     }
 
     // --- 系統設定（深色模式、重置） ---

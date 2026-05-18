@@ -270,7 +270,6 @@
             color: var(--text);
         }
 
-        /* 題庫重溫中，直接標示出正確答案的綠色背景 */
         .options-list li.correct-opt {
             background-color: rgba(40, 167, 69, 0.15) !important;
             border-color: var(--success);
@@ -285,58 +284,6 @@
             border-radius: 6px;
             font-size: 0.85rem;
             border-left: 4px solid var(--primary);
-        }
-
-        /* 內部測驗模式按鈕樣式 */
-        .quiz-options {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .quiz-opt-btn {
-            background-color: var(--card-bg);
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 12px 15px;
-            font-size: 0.95rem;
-            text-align: left;
-            color: var(--text);
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        .quiz-opt-btn:hover:not(:disabled) {
-            background-color: rgba(0,0,0,0.02);
-        }
-
-        .quiz-opt-btn.correct {
-            background-color: var(--success) !important;
-            border-color: var(--success) !important;
-            color: white !important;
-            font-weight: bold;
-        }
-
-        .quiz-opt-btn.wrong {
-            background-color: var(--error) !important;
-            border-color: var(--error) !important;
-            color: white !important;
-        }
-        /* 內部測驗模式的結束返回按鈕微調 */
-        #exit-quiz-btn {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            margin-top: 10px;
-            background-color: var(--gray) !important;
-            color: white !important;
-            text-align: center;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.95rem;
-            font-weight: bold;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -411,24 +358,24 @@
         <div id="subject-list"></div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
-            <button onclick="openSearch()" class="btn" style="background-color: #9a4dc9 !important; color: #333; text-align: center; font-weight: bold; margin: 0;">
+            <button onclick="openSearch()" class="btn" style="background-color: #9a4dc9 !important; color: white; text-align: center; font-weight: bold; margin: 0;">
                 🔍 題庫搜尋
             </button>
-            <button onclick="startSpecialMode('wrong')" class="btn" style="background-color: #dc3545 !important; color: #333; text-align: center; font-weight: bold; margin: 0;">
+            <button onclick="startSpecialMode('wrong')" class="btn" style="background-color: #dc3545 !important; color: white; text-align: center; font-weight: bold; margin: 0;">
                 📖 錯題重溫 (<span id="total-wrong-count">0</span>)
             </button>
         </div>
         
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
-            <button onclick="startSpecialMode('bookmark')" class="btn" style="background-color: #d4a017 !important; color: #333; text-align: center; font-weight: bold; margin: 0;">
+            <button onclick="startSpecialMode('bookmark')" class="btn" style="background-color: #d4a017 !important; color: white; text-align: center; font-weight: bold; margin: 0;">
                 ⭐ 我的收藏 (<span id="total-bookmark-count">0</span>)
             </button>
-            <button onclick="openNotesReview()" class="btn" style="background-color: #2991b3 !important; color: #333; text-align: center; font-weight: bold; margin: 0;">
-                📝 查看已筆記題目 (<span id="total-notes-count">0</span>)
+            <button onclick="openNotesReview()" class="btn" style="background-color: #2991b3 !important; color: white; text-align: center; font-weight: bold; margin: 0;">
+                📝 考點筆記 (<span id="total-notes-count">0</span>)
             </button>
         </div>
 
-            <button onclick="resetAllProgress()" style="margin-top:30px; background:none; border:none; color:#999; text-decoration:underline; width:100%; font-size:0.8rem; cursor: pointer;">重置所有進度 (清除紀錄)</button>
+        <button onclick="resetAllProgress()" style="margin-top:30px; background:none; border:none; color:#999; text-decoration:underline; width:100%; font-size:0.8rem; cursor: pointer;">重置所有進度 (清除紀錄)</button>
     </div>
 
     <div id="screen-quiz" class="screen">
@@ -450,7 +397,7 @@
         <h2 id="static-bank-title">📌 錯題重溫庫</h2>
     
         <div id="quiz-action-zone" style="margin-bottom: 20px;">
-            <button id="start-wrong-quiz-btn" class="btn-primary" style="margin: 0; width: 100%; padding: 15px; border-radius: 10px; font-size: 1.1rem;">⚡ 開始錯題挑戰</button>
+            <button id="start-wrong-quiz-btn" class="btn-primary" style="margin: 0; width: 100%; padding: 15px; border-radius: 10px; font-size: 1.1rem;">⚡ 開始錯題加強挑戰測驗</button>
         </div>
     
         <hr>
@@ -495,18 +442,13 @@
     let currentScore = 0;
     let wrongLog = [];
     let chartInstance = null;
-    let isNotesOnlyReview = false; // 用於追蹤是否僅瀏覽已筆記題目
-    // === [新增] 獨立錯題題庫與內部測驗專用變數 ===
-    let currentQuizIndex = 0;       
-    let activeQuizQuestions = [];
-    // [修改] 記錄目前靜態頁面的模式狀態
-    let currentStaticMode = 'wrong';
-    // 自動生成：<img src="img/A108_1_05.jpg">
-    let imgHtml = `<img src="img/${q.id}.jpg" onerror="this.style.display='none'">`;   
+    let isNotesOnlyReview = false; 
+    let currentStaticMode = 'wrong'; // 記錄當前靜態面板分頁
+   
     const WRONG_STORAGE_KEY = 'marine_wrong_store';
     const STORAGE_KEY = 'marine_quiz_mastery_v3';
 
-    // --- 初始化題庫與事件綁定 ---
+    // --- 初始化題庫與網頁事件 ---
     document.addEventListener('DOMContentLoaded', function() {
         console.log("正在從背景下載大題庫...");
         
@@ -533,17 +475,6 @@
             document.documentElement.setAttribute('data-theme', 'dark');
             if(document.getElementById('theme-toggle')) document.getElementById('theme-toggle').checked = true;
         }
-        // 綁定「開始錯題測驗」按鈕
-        const startQuizBtn = document.getElementById('start-quiz-btn');
-        if (startQuizBtn) startQuizBtn.addEventListener('click', startWrongQuiz);
-
-        // 綁定「內部測驗下一題」按鈕
-        const nextQuizBtn = document.getElementById('next-quiz-btn');
-        if (nextQuizBtn) nextQuizBtn.addEventListener('click', nextQuizQuestion);
-
-        // 綁定「結束測驗返回」按鈕
-        const exitQuizBtn = document.getElementById('exit-quiz-btn');
-        if (exitQuizBtn) exitQuizBtn.addEventListener('click', exitQuiz);
     });
 
     function loadMastery() {
@@ -560,7 +491,7 @@
     function saveBookmarks() { localStorage.setItem('marine_bookmarks', JSON.stringify(bookmarks)); }
     function saveNotes() { localStorage.setItem('marine_notes_store', JSON.stringify(notesStore)); }
 
-    // --- 切換顯示頁面控制面板 ---
+    // --- 介面切換顯示功能 ---
     function showScreen(screenId) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         const target = document.getElementById(screenId);
@@ -568,25 +499,26 @@
         window.scrollTo(0,0);
     }
 
-    // 項目 3: 導航主選單核心控制，修復所有返回上一頁進度不同步問題
     function showMenu() {
         isNotesOnlyReview = false;
         showScreen('screen-menu');
         renderMenu();
     }
 
-    // --- 收藏功能 ---
+    // --- 收藏與筆記功能邏輯 ---
     function toggleBookmark(questionId, element) {
-        const index = bookmarks.indexOf(questionId);
-        if (index === -1) {
-            bookmarks.push(questionId);
+        const index = bookmarks.indexOf(questionId.toString());
+        const indexAlt = bookmarks.indexOf(Number(questionId));
+        
+        if (index === -1 && indexAlt === -1) {
+            bookmarks.push(questionId.toString());
             if(element) element.innerText = '⭐';
         } else {
-            bookmarks.splice(index, 1);
+            if (index !== -1) bookmarks.splice(index, 1);
+            if (indexAlt !== -1) bookmarks.splice(indexAlt, 1);
             if(element) element.innerText = '☆';
         }
         saveBookmarks();
-        // 如果在主選單狀態下，動態更新計數器
         if(document.getElementById('total-bookmark-count')) {
             document.getElementById('total-bookmark-count').innerText = bookmarks.length;
         }
@@ -604,7 +536,7 @@
         }
     }
 
-    // 初始化首頁自帶的篩選功能選單內容
+    // --- 主選單與篩選器生成 ---
     function initHomepageFilterMenus() {
         const yearSelect = document.getElementById('filter-year');
         const termSelect = document.getElementById('filter-term');
@@ -630,8 +562,8 @@
         const s = document.getElementById('filter-subject').value;
         
         const filtered = db.filter(item => {
-            return (y === 'all' || item.year === y) &&
-                   (t === 'all' || item.term === t) &&
+            return (y === 'all' || item.year.toString() === y.toString()) &&
+                   (t === 'all' || item.term.toString() === t.toString()) &&
                    (s === 'all' || item.subject === s);
         });
         document.getElementById('filtered-count').innerText = `篩選出 ${filtered.length} 題`;
@@ -653,31 +585,22 @@
         renderQuestion();
     }
 
-    // --- 開啟獨立「已筆記題目」瀏覽專區 (項目 6) ---
+    // --- 搜尋與筆記瀏覽模組 ---
     function openNotesReview() {
         isNotesOnlyReview = true;
         showScreen('screen-search');
-        
-        // 變更標題提示為已筆記查看模式
         document.getElementById('search-title-heading').innerText = "📝 我的考點隨身筆記題目複習";
-        
-        if(document.getElementById('search-filter-year')) {
-            document.getElementById('search-filter-year').value = 'all';
-            document.getElementById('search-filter-term').value = 'all';
-            document.getElementById('search-filter-subject').value = 'all';
-        }
-        const input = document.getElementById('search-input');
-        input.value = ''; 
-        input.oninput = () => runSearch(input.value);
-        runSearch(''); 
+        clearSearchInputs();
     }
 
-    // --- 開啟獨立搜尋瀏覽頁面 ---
     function openSearch() {
         isNotesOnlyReview = false;
         showScreen('screen-search');
         document.getElementById('search-title-heading').innerText = "🔍 全題庫高階瀏覽與搜尋";
-        
+        clearSearchInputs();
+    }
+
+    function clearSearchInputs() {
         if(document.getElementById('search-filter-year')) {
             document.getElementById('search-filter-year').value = 'all';
             document.getElementById('search-filter-term').value = 'all';
@@ -689,7 +612,6 @@
         runSearch(''); 
     }
 
-    // --- 動態初始化「搜尋頁面」的專屬獨立下拉選單 ---
     function initSearchFilterMenus() {
         const yearSelect = document.getElementById('search-filter-year');
         const termSelect = document.getElementById('search-filter-term');
@@ -709,7 +631,6 @@
         }
     }
 
-    // --- 高階二合一交叉搜尋核心引擎 + 筆記即時動態編輯修復 (項目 5 & 項目 6) ---
     function runSearch(keyword) {
         const list = document.getElementById('search-results-list');
         const countLabel = document.getElementById('search-results-count');
@@ -722,11 +643,9 @@
         const k = keyword.toLowerCase().trim();
 
         let results = db.filter(item => {
-            // 項目 6: 如果是筆記專區模式，過濾掉沒有筆記的題目
             if (isNotesOnlyReview && !notesStore[item.id]) return false;
-
-            const matchYear = (selYear === 'all' || item.year === selYear);
-            const matchTerm = (selTerm === 'all' || item.term === selTerm);
+            const matchYear = (selYear === 'all' || item.year.toString() === selYear.toString());
+            const matchTerm = (selTerm === 'all' || item.term.toString() === selTerm.toString());
             const matchSubject = (selSubject === 'all' || item.subject === selSubject);
             const matchKeyword = (k === '' || item.q.toLowerCase().includes(k) || (item.o && item.o.join('').toLowerCase().includes(k)));
             return matchYear && matchTerm && matchSubject && matchKeyword;
@@ -741,15 +660,20 @@
             div.className = 'question-card';
             const savedNote = notesStore[item.id] || "";
             
-            // 項目 5: 修改為「可即時在瀏覽區塊撰寫、編輯儲存筆記」的互動介面
+            // 搜尋引擎圖片載入邏輯
+            let searchImgHtml = `<img src="images/${item.id}.jpg" onerror="this.style.display='none'" style="max-width:100%; height:auto; margin:10px 0; border-radius:8px; display:block;">`;
+
             div.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; font-size: 0.75rem; color: var(--primary); margin-bottom: 5px; font-weight: bold;">
                     <div>📍 ${SUBJECT_NAMES[item.subject]} | ${item.s}</div>
                     <div style="cursor:pointer; font-size:1.1rem;" onclick="toggleBookmark('${item.id}', this.querySelector('span'))">
-                        <span>${bookmarks.includes(item.id) ? '⭐' : '☆'}</span> 收藏
+                        <span>${bookmarks.includes(item.id.toString()) || bookmarks.includes(Number(item.id)) ? '⭐' : '☆'}</span> 收藏
                     </div>
                 </div>
                 <div style="font-weight: bold; margin-bottom: 8px; color: var(--text);">${item.q}</div>
+                
+                ${searchImgHtml}
+
                 <div style="font-size: 0.9rem; margin-bottom: 12px; padding-left: 10px; border-left: 2px solid #ccc;">
                     ${item.o.map((opt, idx) => {
                         const isCorrect = idx === item.a;
@@ -767,16 +691,9 @@
             `;
             list.appendChild(div);
         });
-
-        if (results.length > displayLimit) {
-            const more = document.createElement('div');
-            more.innerText = `...還有 ${results.length - displayLimit} 題，請善用上方選單縮小範圍或輸入更精確關鍵字...`;
-            more.style = 'text-align:center; color:#888; padding:15px; font-size:0.9rem;';
-            list.appendChild(more);
-        }
     }
 
-    // --- 隨機模擬測驗啟動 (項目 1 Bug 修復) ---
+    // --- 標準模擬測驗與互動流程核心 ---
     function startQuiz(subjectKey) {
         currentSubject = subjectKey; 
         if (!db || db.length === 0) {
@@ -791,92 +708,36 @@
         }
         
         const preferUnmastered = document.getElementById('mode-toggle')?.checked;
-        if (preferUnmastered) {
-            const masteredIds = masteryData[subjectKey] || [];
-            const unmasteredPool = allQuestions.filter(q => !masteredIds.includes(q.id));
-            if (unmasteredPool.length >= 10) {
-                allQuestions = unmasteredPool;
+        if (preferUnmastered && masteryData[subjectKey]) {
+            let masteredIds = masteryData[subjectKey];
+            let unmastered = allQuestions.filter(q => !masteredIds.includes(q.id.toString()) && !masteredIds.includes(Number(q.id)));
+            if (unmastered.length > 0) {
+                allQuestions = unmastered;
             }
         }
-        
-        currentQuiz = []; 
-        const numToExtract = Math.min(40, allQuestions.length); 
-        const poolCopy = [...allQuestions];
-        
-        for (let i = 0; i < numToExtract; i++) {
-            const randomIndex = Math.floor(Math.random() * poolCopy.length);
-            currentQuiz.push(poolCopy[randomIndex]);
-            poolCopy.splice(randomIndex, 1);
-        }
 
-        currentIndex = 0;   
-        currentScore = 0;   
-        wrongLog = [];      
-    
+        currentQuiz = allQuestions.sort(() => 0.5 - Math.random()).slice(0, 40);
+        currentIndex = 0;
+        currentScore = 0;
+        wrongLog = [];
         showScreen('screen-quiz');
         renderQuestion();
     }
 
-  function startSpecialMode(mode) {
-        currentStaticMode = mode;
-        const titleLabel = document.getElementById('static-bank-title');
-        const quizZone = document.getElementById('quiz-action-zone');
-        
-        if (mode === 'wrong') {
-            if (titleLabel) titleLabel.innerText = "📌 錯題重溫庫";
-            if (quizZone) quizZone.style.display = "block"; // 錯題模式：顯示「開始測驗」按鈕
-            
-            // 綁定點擊事件：點擊後直接啟動你原本寫好的標準隨機抽題測驗
-            const startBtn = document.getElementById('start-wrong-quiz-btn');
-            if (startBtn) {
-                startBtn.onclick = function() {
-                    startStandardWrongQuiz();
-                };
-            }
-        } else if (mode === 'bookmark') {
-            if (titleLabel) titleLabel.innerText = "⭐ 收藏題目庫";
-            if (quizZone) quizZone.style.display = "none";  // 收藏模式：隱藏測驗按鈕，達成純靜態
-        }
-        
-        // 切換並渲染靜態列表
-        showScreen('wrong-questions-bank');
-        renderUniversalStaticBank();
-    }
-
-    // 錯題加強測驗核心：完美對接你原本 100% 寫好的標準隨機測驗流
-    function startStandardWrongQuiz() {
-        if (wrongStore.length === 0) {
-            alert("當前沒有任何錯題可以測試！");
-            return;
-        }
-        const specialPool = db.filter(item => wrongStore.includes(item.id.toString()) || wrongStore.includes(item.id));
-        if (specialPool.length === 0) {
-            alert("資料同步異常，無法對應題庫代碼！");
-            return;
-        }
-        
-        // 隨機打亂進行測驗
-        currentQuiz = specialPool.sort(() => 0.5 - Math.random());
-        currentSubject = "WRONG_MODE";
-        currentIndex = 0;
-        currentScore = 0;
-        wrongLog = [];
-        showScreen('screen-quiz'); // 進入你原本點按鈕的標準測驗畫面
-        renderQuestion();
-    }
-
-    // --- 題堂渲染器 ---
     function renderQuestion() {
         const q = currentQuiz[currentIndex];
-        const isBookmarked = bookmarks.includes(q.id);
+        const isBookmarked = bookmarks.includes(q.id.toString()) || bookmarks.includes(Number(q.id));
         const subjectTxt = SUBJECT_NAMES[q.subject] || "輪機科目";
         
-        // ⬇️ 新增：定義圖片路徑，若沒圖片自動隱藏，限制最大寬度防止手機排版跑掉
+        // 測驗畫面動態圖片載入
         let questionImageHtml = `<img src="images/${q.id}.jpg" onerror="this.style.display='none'" style="max-width:100%; height:auto; margin-top:10px; border-radius:8px; display:block;">`;
+        
+        document.getElementById('q-count').innerText = `${currentIndex + 1} / ${currentQuiz.length}`;
+        document.getElementById('q-score').innerText = `得分: ${currentScore}`;
 
         document.getElementById('q-text').innerHTML = `
             <div style="font-size:0.85rem; color:var(--primary); margin-bottom:5px; font-weight:bold;">
-                📍 ${subjectTxt} | ${q.s}
+                📍 ${subjectTxt} | ${q.s || ''}
             </div>
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                 <span style="font-size:1.15rem; color:var(--text);">${q.q}</span>
@@ -884,71 +745,59 @@
                     ${isBookmarked ? '⭐' : '☆'}
                 </span>
             </div>
+            ${questionImageHtml}
         `;
         
-        document.getElementById('q-count').innerText = `進度: ${currentIndex + 1} / ${currentQuiz.length}`;
-        document.getElementById('q-score').innerText = `累計得分: ${Math.round(currentScore)}`;
-        document.getElementById('session-bar').style.width = `${((currentIndex)/currentQuiz.length)*100}%`;
+        const container = document.getElementById('options-container');
+        container.innerHTML = '';
+        document.getElementById('btn-next').style.display = 'none';
 
-        const optDiv = document.getElementById('options-container');
-        optDiv.innerHTML = '';
-        q.o.forEach((opt, i) => {
-            let optLetter = ['A', 'B', 'C', 'D'][i];
-            let optImg = `<img src="images/${q.id}_${optLetter}.jpg" onerror="this.style.display='none'" style="max-height:80px; display:block;">`;
+        q.o.forEach((opt, idx) => {
             const btn = document.createElement('button');
             btn.className = 'btn btn-option';
             btn.innerText = opt;
-            btn.onclick = () => checkAnswer(i, btn);
-            optDiv.appendChild(btn);
+            btn.onclick = () => handleAnswer(idx, btn);
+            container.appendChild(btn);
         });
 
-        let noteZone = document.getElementById('note-zone');
-        if(!noteZone) {
-            noteZone = document.createElement('div');
-            noteZone.id = 'note-zone';
-            noteZone.style = "margin-top:20px; border-top:1px dashed #ccc; padding-top:15px;";
-            document.getElementById('screen-quiz').insertBefore(noteZone, document.getElementById('btn-next'));
-        }
-        const savedNote = notesStore[q.id] || "";
-        noteZone.innerHTML = `
-            <label style="font-size:0.9rem; font-weight:bold; color:var(--gray);">📝 考點口訣筆記：</label>
-            <textarea id="note-input" placeholder="按此輸入記憶口訣，系統會跨平台即時同步..." style="width:100%; height:50px; margin-top:5px; padding:8px; border-radius:6px; border:1px solid #ccc; font-family:inherit; background:var(--bg); color:var(--text); box-sizing:border-box;">${savedNote}</textarea>
-        `;
-        document.getElementById('note-input').oninput = (e) => saveCurrentNote(q.id, e.target.value);
-        document.getElementById('btn-next').style.display = 'none';
+        // 更新頂端微型進度條
+        const progressPercent = ((currentIndex) / currentQuiz.length) * 100;
+        document.getElementById('session-bar').style.width = `${progressPercent}%`;
     }
 
-    function checkAnswer(userIdx, btn) {
+    function handleAnswer(selectedIndex, clickedBtn) {
         const q = currentQuiz[currentIndex];
-        const allBtns = document.querySelectorAll('.btn-option');
-        allBtns.forEach(b => b.onclick = null);
+        const container = document.getElementById('options-container');
+        const buttons = container.querySelectorAll('.btn-option');
+        
+        buttons.forEach(b => b.disabled = true); // 鎖定按鈕防止重複點擊
 
-        if (userIdx === q.a) {
-            btn.classList.add('correct');
+        if (selectedIndex === q.a) {
+            clickedBtn.classList.add('correct');
             currentScore += (100 / currentQuiz.length);
             
-            if (q.subject && q.subject !== "COMBINED_FILTER" && !currentSubject.includes("MODE")) {
-                if (!masteryData[q.subject]) masteryData[q.subject] = [];
-                if (!masteryData[q.subject].includes(q.id)) {
-                    masteryData[q.subject].push(q.id);
+            // 答對時，如果是在標準隨機考，將該題寫入熟練白名單
+            if(!currentSubject.includes("MODE") && !currentSubject.includes("FILTER")) {
+                if(!masteryData[q.subject]) masteryData[q.subject] = [];
+                if(!masteryData[q.subject].includes(q.id.toString())) {
+                    masteryData[q.subject].push(q.id.toString());
                     saveMastery();
                 }
             }
-            const wIndex = wrongStore.indexOf(q.id);
-            if (wIndex > -1) {
-                wrongStore.splice(wIndex, 1);
-                localStorage.setItem(WRONG_STORAGE_KEY, JSON.stringify(wrongStore));
-            }
         } else {
-            btn.classList.add('wrong');
-            allBtns[q.a].classList.add('correct');
+            clickedBtn.classList.add('wrong');
+            buttons[q.a].classList.add('correct'); // 高亮提示正確答案
             
-            if (!wrongStore.includes(q.id)) {
-                wrongStore.push(q.id);
+            wrongLog.push(q);
+            
+            // 答錯時，自動推入 localStorage 錯題庫
+            if(!wrongStore.includes(q.id.toString())) {
+                wrongStore.push(q.id.toString());
                 localStorage.setItem(WRONG_STORAGE_KEY, JSON.stringify(wrongStore));
             }
-            wrongLog.push({ q: q.q, sub: SUBJECT_NAMES[q.subject] || "綜合篩選", ans: q.o[q.a], user: q.o[userIdx], src: q.s, id: q.id });
         }
+
+        document.getElementById('q-score').innerText = `得分: ${Math.round(currentScore)}`;
         document.getElementById('btn-next').style.display = 'block';
     }
 
@@ -957,227 +806,251 @@
         if (currentIndex < currentQuiz.length) {
             renderQuestion();
         } else {
-            quitQuiz();
+            showResult();
         }
     }
 
     function quitQuiz() {
+        if(confirm("確定要提早結束本次測驗並結算分數嗎？")) {
+            showResult();
+        }
+    }
+
+    function showResult() {
         showScreen('screen-result');
-        document.getElementById('session-bar').style.width = '100%';
-        document.getElementById('final-score').innerText = Math.round(currentScore);
+        const scoreFinal = Math.round(currentScore);
+        document.getElementById('final-score').innerText = scoreFinal;
         
         const msg = document.getElementById('result-msg');
-        if(currentScore >= 60) {
-            msg.innerText = "🎉 順利及格！實力雄厚！"; msg.style.color = "var(--success)";
+        if(scoreFinal >= 60) {
+            msg.innerText = "🎉 恭喜及格！達到一等管輪及格標準！";
+            msg.style.color = "var(--success)";
         } else {
-            msg.innerText = "💪 分數未滿60，繼續努力！"; msg.style.color = "var(--error)";
+            msg.innerText = "☕ 仍需努力！分數未達及格門檻，多看錯題重溫！";
+            msg.style.color = "var(--error)";
         }
 
-        const list = document.getElementById('review-list');
-        list.innerHTML = '';
+        const reviewList = document.getElementById('review-list');
+        reviewList.innerHTML = '';
         if(wrongLog.length === 0) {
-            list.innerHTML = '<div style="text-align:center; padding:20px;">優秀！本次模擬考答對全部題目！</div>';
+            reviewList.innerHTML = '<p style="color:var(--success); text-align:center; font-weight:bold;">太強了！本次測驗完全沒有錯題！</p>';
         } else {
-            wrongLog.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'review-item';
-                const noteHtml = notesStore[item.id] ? `<div style="margin-top:5px; color:#d4a017; font-size:0.85rem;">📝 我的筆記：${notesStore[item.id]}</div>` : '';
-                div.innerHTML = `
-                    <div style="font-size:0.75rem; color:var(--primary); margin-bottom:3px;">📍 ${item.sub} | ${item.src}</div>
-                    <div style="font-weight:bold; margin-bottom:5px;">${item.q}</div>
-                    <div style="color:var(--success);">正確答案：${item.ans}</div>
-                    <div style="color:var(--error);">您的回答：${item.user}</div>
-                    ${noteHtml}
+            wrongLog.forEach(q => {
+                const item = document.createElement('div');
+                item.className = 'review-item';
+                item.innerHTML = `
+                    <div style="font-weight:bold; color:var(--text);">${q.q}</div>
+                    <div style="color:var(--success); font-weight:bold; margin-top:3px;">💡 正確解答：${q.o[q.a]}</div>
                 `;
-                list.appendChild(div);
+                reviewList.appendChild(item);
+            });
+        }
+        document.getElementById('session-bar').style.width = `100%`;
+    }
+
+    // --- 錯題與收藏「純靜態分流與中央控制面板」 ---
+    function startSpecialMode(mode) {
+        currentStaticMode = mode;
+        const titleLabel = document.getElementById('static-bank-title');
+        const quizZone = document.getElementById('quiz-action-zone');
+        
+        if (mode === 'wrong') {
+            if (titleLabel) titleLabel.innerText = "📌 我的錯題重溫庫 (靜態瀏覽)";
+            if (quizZone) quizZone.style.display = "block"; // 錯題模式：秀出測驗快捷鈕
+            
+            const startBtn = document.getElementById('start-wrong-quiz-btn');
+            if (startBtn) {
+                startBtn.onclick = function() {
+                    startStandardWrongQuiz();
+                };
+            }
+        } else if (mode === 'bookmark') {
+            if (titleLabel) titleLabel.innerText = "⭐ 我的收藏題目庫 (純瀏覽)";
+            if (quizZone) quizZone.style.display = "none";  // 收藏模式：隱藏測驗按鈕
+        }
+        
+        showScreen('wrong-questions-bank');
+        renderUniversalStaticBank();
+    }
+
+    function startStandardWrongQuiz() {
+        if (wrongStore.length === 0) {
+            alert("當前沒有任何錯題可以進行測試！");
+            return;
+        }
+        const specialPool = db.filter(item => wrongStore.includes(item.id.toString()) || wrongStore.includes(item.id));
+        if (specialPool.length === 0) {
+            alert("資料庫對應代碼異常！");
+            return;
+        }
+        
+        currentQuiz = specialPool.sort(() => 0.5 - Math.random());
+        currentSubject = "WRONG_MODE";
+        currentIndex = 0;
+        currentScore = 0;
+        wrongLog = [];
+        showScreen('screen-quiz');
+        renderQuestion();
+    }
+
+    function renderUniversalStaticBank() {
+        const container = document.getElementById('wrong-list-container');
+        const wrongCountSpan = document.getElementById('total-wrong-count');
+        const bookmarkCountSpan = document.getElementById('total-bookmark-count');
+        
+        if (!container) return;
+        container.innerHTML = ''; 
+
+        if (wrongCountSpan) wrongCountSpan.innerText = wrongStore.length;
+        if (bookmarkCountSpan) bookmarkCountSpan.innerText = bookmarks.length;
+
+        let idTargetList = (currentStaticMode === 'bookmark') ? bookmarks : wrongStore;
+
+        if (idTargetList.length === 0) {
+            const typeText = (currentStaticMode === 'bookmark') ? '收藏' : '錯題';
+            container.innerHTML = `<p style="color: var(--gray); text-align: center; padding: 30px; font-weight: bold;">目前沒有任何${typeText}紀錄喔！</p>`;
+            return;
+        }
+        
+        const displayPool = db.filter(item => idTargetList.includes(item.id.toString()) || idTargetList.includes(item.id));
+
+        displayPool.forEach((q, index) => {
+            const card = document.createElement('div');
+            card.className = 'question-card_wrong';
+            
+            // 靜態瀏覽卡片動態圖片載入邏輯
+            let staticImageHtml = `<img src="images/${q.id}.jpg" onerror="this.style.display='none'" style="max-width:100%; height:auto; margin:10px 0; border-radius:8px; display:block;">`;
+            
+            const savedNote = notesStore[q.id] ? `💡 我的口訣：${notesStore[q.id]}` : `💡 正確答案：${q.o[q.a]}`;
+            const btnText = (currentStaticMode === 'bookmark') ? '❌ 取消收藏' : '❌ 移除錯題';
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <span class="badge" style="background-color: ${currentStaticMode === 'bookmark' ? '#d4a017' : 'var(--error)'};">
+                        📍 ${SUBJECT_NAMES[q.subject] || '輪機'} | 項目 ${index + 1}
+                    </span>
+                    <button class="delete-btn" onclick="removeUniversalItem('${q.id}')">${btnText}</button>
+                </div>
+                <p class="question-text"><strong>${q.q}</strong></p>
+                
+                ${staticImageHtml}
+                
+                <ul class="options-list">
+                    ${q.o.map((opt, i) => `<li class="${i === q.a ? 'correct-opt' : ''}">${opt}</li>`).join('')}
+                </ul>
+                <div class="note-zone">${savedNote}</div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function removeUniversalItem(questionId) {
+        if (currentStaticMode === 'bookmark') {
+            bookmarks = bookmarks.filter(id => id.toString() !== questionId.toString() && Number(id) !== Number(questionId));
+            saveBookmarks();
+        } else {
+            wrongStore = wrongStore.filter(id => id.toString() !== questionId.toString() && Number(id) !== Number(questionId));
+            localStorage.setItem(WRONG_STORAGE_KEY, JSON.stringify(wrongStore));
+        }
+        renderUniversalStaticBank();
+    }
+
+    // --- 渲染首頁列表與熟練度圖表 ---
+    function renderMenu() {
+        const listContainer = document.getElementById('subject-list');
+        if(!listContainer) return;
+        listContainer.innerHTML = '';
+
+        if(document.getElementById('total-wrong-count')) document.getElementById('total-wrong-count').innerText = wrongStore.length;
+        if(document.getElementById('total-bookmark-count')) document.getElementById('total-bookmark-count').innerText = bookmarks.length;
+        if(document.getElementById('total-notes-count')) document.getElementById('total-notes-count').innerText = Object.keys(notesStore).length;
+
+        let labels = [];
+        let masteryCounts = [];
+
+        for (let key in SUBJECT_NAMES) {
+            const subjectQuestions = db.filter(item => item.subject === key);
+            const totalInSubject = subjectQuestions.length;
+            const masteredCount = masteryData[key] ? db.filter(item => item.subject === key && (masteryData[key].includes(item.id.toString()) || masteryData[key].includes(Number(item.id)))).length : 0;
+            
+            const percent = totalInSubject > 0 ? Math.round((masteredCount / totalInSubject) * 100) : 0;
+
+            labels.push(key);
+            masteryCounts.push(percent);
+
+            const btn = document.createElement('button');
+            btn.className = 'subject-btn';
+            btn.onclick = () => startQuiz(key);
+            btn.innerHTML = `
+                <div class="btn-progress-bg" style="width: ${percent}%;"></div>
+                <div class="btn-content">
+                    <div>
+                        <div class="subject-title">🚢 ${SUBJECT_NAMES[key]}</div>
+                        <div class="subject-stats">總題數: ${totalInSubject} 題 | 已熟練: ${masteredCount} 題</div>
+                    </div>
+                    <div style="font-weight: bold; color: var(--primary); font-size:1.1rem; z-index:3;">${percent}%</div>
+                </div>
+            `;
+            listContainer.appendChild(btn);
+        }
+
+        // 重新渲染 Chart.js 熟練度雷達圖
+        const ctx = document.getElementById('masteryChart');
+        if (ctx) {
+            if (chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx.getContext('2d'), {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '各科精熟百分比 (%)',
+                        data: masteryCounts,
+                        backgroundColor: 'rgba(0, 95, 153, 0.15)',
+                        borderColor: '#005f99',
+                        pointBackgroundColor: '#ffcc00',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            min: 0,
+                            max: 100,
+                            ticks: { display: false },
+                            grid: { color: 'rgba(0,0,0,0.08)' }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
             });
         }
     }
 
-    // --- 項目 2: 熟練度統計圖表正名渲染器 ---
-    function renderMasteryChart() {
-        const ctx = document.getElementById('masteryChart');
-        if (!ctx) return;
-
-        // 項目 2: 將原本寫死的 ['科目A', '科目B'] 更改為 SUBJECT_NAMES 對應的精準中文考科名稱
-        const labels = Object.keys(SUBJECT_NAMES).map(key => SUBJECT_NAMES[key]);
-        const dataValues = Object.keys(SUBJECT_NAMES).map(key => {
-            const totalInSub = db.filter(item => item.subject === key).length || 1;
-            const masteredCount = (masteryData[key] || []).length;
-            return Math.round((masteredCount / totalInSub) * 100);
-        });
-
-        if (chartInstance) {
-            chartInstance.destroy();
-        }
-
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-
-        chartInstance = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: '熟練度百分比 (%)',
-                    data: dataValues,
-                    backgroundColor: 'rgba(0, 95, 153, 0.6)',
-                    borderColor: 'rgba(0, 95, 153, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { 
-                    legend: { display: false }
-                },
-                scales: {
-                    x: { 
-                        beginAtZero: true, 
-                        max: 100,
-                        grid: { color: isDark ? '#333' : '#eee' },
-                        ticks: { color: isDark ? '#aaa' : '#666' }
-                    },
-                    y: {
-                        grid: { display: false },
-                        ticks: { color: isDark ? '#aaa' : '#333', font: { size: 11 } }
-                    }
-                }
-            }
-        });
-    }
-
-    // --- 渲染首頁大廳列表 (項目 4 修正) ---
-    function renderMenu() {
-        if (document.getElementById('total-bookmark-count')) document.getElementById('total-bookmark-count').innerText = bookmarks.length;
-        if (document.getElementById('total-wrong-count')) document.getElementById('total-wrong-count').innerText = wrongStore.length;
-        if (document.getElementById('total-notes-count')) document.getElementById('total-notes-count').innerText = Object.keys(notesStore).length;
-        
-        // 項目 4 修正：動態渲染按鈕區，徹底拿掉冗餘的【科目A】字樣
-        const container = document.getElementById('subject-list');
-        if(container) {
-            container.innerHTML = '';
-            for(let key in SUBJECT_NAMES) {
-                const totalInSub = db.filter(item => item.subject === key).length || 1;
-                const masteredCount = (masteryData[key] || []).length;
-                const pct = Math.round((masteredCount / totalInSub) * 100) || 0;
-                
-                // 此處 .subject-title 直接輸出對照表的中文名稱（如：船舶主機-柴油機），不含任何【科目A】等雜訊
-                const btnHtml = `
-                    <button class="subject-btn" onclick="startQuiz('${key}')">
-                        <div class="btn-progress-bg" style="width: ${pct}%;"></div>
-                        <div class="btn-content" style="width:100%;">
-                            <div>
-                                <div class="subject-title">${SUBJECT_NAMES[key]}</div>
-                                <div class="subject-stats">總題數: ${totalInSub} 題 | 已熟練: ${masteredCount} 題</div>
-                            </div>
-                            <div style="font-weight:bold; color:var(--primary); font-size:1.1rem;">${pct}%</div>
-                        </div>
-                    </button>
-                `;
-                container.innerHTML += btnHtml;
-            }
-        }
-        
-        // 重新繪製統計圖表
-        renderMasteryChart();
-    }
-
-    // --- 切換深色模式 ---
+    // --- 系統設定（深色模式、重置） ---
     function toggleTheme() {
-        const checkbox = document.getElementById('theme-toggle');
-        if(checkbox && checkbox.checked) {
-            document.documentElement.setAttribute('data-theme', 'dark');
-            localStorage.setItem('theme', 'dark');
-        } else {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        if (isDark) {
             document.documentElement.removeAttribute('data-theme');
             localStorage.setItem('theme', 'light');
+        } else {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            localStorage.setItem('theme', 'dark');
         }
-        renderMasteryChart();
     }
 
-    // --- 完全重置 ---
     function resetAllProgress() {
-        if(confirm("確定要重置所有進度嗎？這將會清空您的所有熟練度統計、錯題本、收藏以及筆記內容，且無法還原！")) {
+        if (confirm("⚠️ 注意：這將會永久刪除您所有的錯題紀錄、筆記口訣、收藏以及學習進度！確定要重置嗎？")) {
             localStorage.clear();
             masteryData = {};
             bookmarks = [];
             wrongStore = [];
             notesStore = {};
-            for(let key in SUBJECT_NAMES) { masteryData[key] = []; }
-            alert("系統進度已完全重置！");
-            showMenu();
+            alert("進度已全數清空！網頁即將重新整理。");
+            location.reload();
         }
     }
-   // ==========================================================================
-// 新增：通用靜態卡片瀏覽與移除引擎 (完美支援收藏與錯題獨立操作)
-// ==========================================================================
-
-function renderUniversalStaticBank() {
-    const container = document.getElementById('wrong-list-container');
-    const wrongCountSpan = document.getElementById('total-wrong-count');
-    const bookmarkCountSpan = document.getElementById('total-bookmark-count');
-    
-    if (!container) return;
-    container.innerHTML = ''; 
-
-    // 動態同步更新主畫面按鈕上的數字計數
-    if (wrongCountSpan) wrongCountSpan.innerText = wrongStore.length;
-    if (bookmarkCountSpan) bookmarkCountSpan.innerText = bookmarks.length;
-
-    // 根據當前分頁模式，決定撈取的資料來源陣列
-    let idTargetList = (currentStaticMode === 'bookmark') ? bookmarks : wrongStore;
-
-    if (idTargetList.length === 0) {
-        const typeText = (currentStaticMode === 'bookmark') ? '收藏' : '錯題';
-        container.innerHTML = `<p style="color: var(--gray); text-align: center; padding: 30px; font-weight: bold;">目前沒有任何${typeText}紀錄喔！</p>`;
-        return;
-    }
-    
-    // 從大資料庫 db 中過濾出對應的完整題目物件
-    const displayPool = db.filter(item => idTargetList.includes(item.id.toString()) || idTargetList.includes(item.id));
-
-    displayPool.forEach((q, index) => {
-        const card = document.createElement('div');
-        card.className = 'question-card_wrong';
-
-        // ⬇️ 新增：靜態列表的圖片注入
-        let staticImageHtml = `<img src="images/${q.id}.jpg" onerror="this.style.display='none'" style="max-width:100%; height:auto; margin:10px 0; border-radius:8px; display:block;">`;
-        
-        // 優先讀取你的考點口訣隨身筆記
-        const savedNote = notesStore[q.id] ? `💡 我的口訣：${notesStore[q.id]}` : `💡 正確答案：${q.o[q.a]}`;
-        const btnText = (currentStaticMode === 'bookmark') ? '❌ 取消收藏' : '❌ 移除錯題';
-
-        card.innerHTML = `
-            <div class="card-header">
-                <span class="badge" style="background-color: ${currentStaticMode === 'bookmark' ? '#d4a017' : 'var(--error)'};">
-                    📍 ${SUBJECT_NAMES[q.subject] || '輪機'} | 項目 ${index + 1}
-                </span>
-                <button class="delete-btn" onclick="removeUniversalItem('${q.id}')">${btnText}</button>
-            </div>
-            <p class="question-text"><strong>${q.q}</strong></p>
-            <ul class="options-list">
-                ${q.o.map((opt, i) => `<li class="${i === q.a ? 'correct-opt' : ''}">${opt}</li>`).join('')}
-            </ul>
-            <div class="note-zone">${savedNote}</div>
-        `;
-        container.appendChild(card);
-    });
-}
-
-// 靜態瀏覽卡片右上角的快速擦除功能
-function removeUniversalItem(questionId) {
-    if (currentStaticMode === 'bookmark') {
-        bookmarks = bookmarks.filter(id => id.toString() !== questionId.toString());
-        saveBookmarks();
-    } else {
-        wrongStore = wrongStore.filter(id => id.toString() !== questionId.toString());
-        localStorage.setItem(WRONG_STORAGE_KEY, JSON.stringify(wrongStore));
-    }
-    // 重新編排畫面，即時刷新
-    renderUniversalStaticBank();
-}
 </script>
 </body>
 </html>

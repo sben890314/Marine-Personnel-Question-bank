@@ -318,15 +318,10 @@
     
     <div id="screen-menu" class="screen active">
 
-        <div id="screen-menu" class="screen active">
-
-    <div class="score-board" id="stats-container" style="display: block; margin-bottom: 20px;">
-        <h4 style="margin: 0 0 10px 0;">📊 學習熟練度統計</h4>
-        <div style="height: 260px; position: relative;">
-            <canvas id="masteryChart"></canvas>
+        <div class="score-board" id="stats-container" style="margin-bottom: 20px;">
+            <h4 style="margin: 0 0 10px 0;">📊 學習熟練度統計</h4>
+            <canvas id="masteryChart" style="max-height: 180px;"></canvas>
         </div>
-    </div>
-</div>
         
         <div class="mode-switch">
             <span class="switch-label">💪 優先練習「未熟練」題目</span>
@@ -480,7 +475,6 @@
             document.documentElement.setAttribute('data-theme', 'dark');
             if(document.getElementById('theme-toggle')) document.getElementById('theme-toggle').checked = true;
         }
-        renderMasteryChart();
     });
 
     function loadMastery() {
@@ -999,65 +993,41 @@
             `;
             listContainer.appendChild(btn);
         }
-    }
 
-    function renderMasteryChart() {
-    const ctx = document.getElementById('masteryChart');
-    if (!ctx) return;
-    
-    const labels = Object.keys(SUBJECT_NAMES).map(key => SUBJECT_NAMES[key]);
-    
-    // 這裡計算出的變數是 dataValues
-    const dataValues = Object.keys(SUBJECT_NAMES).map(key => {
-        const totalInSub = db.filter(item => item.subject === key).length || 1;
-        const masteredCount = (masteryData[key] || []).length;
-        return Math.round((masteredCount / totalInSub) * 100);
-    });
-
-    if (chartInstance) {
-        chartInstance.destroy();
-    }
-
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-
-    // 根據深淺色主題自動切換長條圖顏色，深色模式下亮一點比較有質感
-    const barBgColor = isDark ? 'rgba(52, 152, 219, 0.7)' : 'rgba(0, 95, 153, 0.6)';
-    const barBorderColor = isDark ? 'rgba(52, 152, 219, 1)' : 'rgba(0, 95, 153, 1)';
-
-    chartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: '熟練度百分比 (%)',
-                data: dataValues, // 🛠️ 修正點：將原本的 masteryCounts 改為上方算好的 dataValues
-                backgroundColor: barBgColor,
-                borderColor: barBorderColor,
-                borderWidth: 1
-            }]
-        },
-        options: {
-            indexAxis: 'y', // 水平長條圖
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { 
-                legend: { display: false }
-            },
-            scales: {
-                x: { 
-                    beginAtZero: true, 
-                    max: 100,
-                    grid: { color: isDark ? '#333' : '#eee' },
-                    ticks: { color: isDark ? '#aaa' : '#666' }
+        // 重新渲染 Chart.js 熟練度雷達圖
+        const ctx = document.getElementById('masteryChart');
+        if (ctx) {
+            if (chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx.getContext('2d'), {
+                type: 'radar',
+                data: {
+                    labels: Object.values(SUBJECT_NAMES),
+                    datasets: [{
+                        label: '各科精熟百分比 (%)',
+                        data: masteryCounts,
+                        backgroundColor: 'rgba(0, 95, 153, 0.15)',
+                        borderColor: '#005f99',
+                        pointBackgroundColor: '#ffcc00',
+                        borderWidth: 2
+                    }]
                 },
-                y: {
-                    grid: { display: false },
-                    ticks: { color: isDark ? '#aaa' : '#333', font: { size: 11 } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            min: 0,
+                            max: 100,
+                            ticks: { display: false },
+                            grid: { color: 'rgba(0,0,0,0.08)' }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
                 }
-            }
+            });
         }
-    });
-}
+    }
+
     // --- 系統設定（深色模式、重置） ---
     function toggleTheme() {
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';

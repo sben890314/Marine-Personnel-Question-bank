@@ -631,6 +631,7 @@
         }
     }
 
+    // 🛠️ 整合更新：高階搜尋瀏覽畫面支援選項圖片
     function runSearch(keyword) {
         const list = document.getElementById('search-results-list');
         const countLabel = document.getElementById('search-results-count');
@@ -660,12 +661,11 @@
             div.className = 'question-card';
             const savedNote = notesStore[item.id] || "";
             
-            // 搜尋引擎圖片載入邏輯
             let searchImgHtml = `<img src="images/${item.id}.jpg" onerror="this.style.display='none'" style="max-width:100%; height:auto; margin:10px 0; border-radius:8px; display:block;">`;
 
             div.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; font-size: 0.75rem; color: var(--primary); margin-bottom: 5px; font-weight: bold;">
-                    <div>📍 ${SUBJECT_NAMES[item.subject]} | ${item.s}</div>
+                    <div>📍 ${SUBJECT_NAMES[item.subject]} | ${item.s || ''}</div>
                     <div style="cursor:pointer; font-size:1.1rem;" onclick="toggleBookmark('${item.id}', this.querySelector('span'))">
                         <span>${bookmarks.includes(item.id.toString()) || bookmarks.includes(Number(item.id)) ? '⭐' : '☆'}</span> 收藏
                     </div>
@@ -677,8 +677,10 @@
                 <div style="font-size: 0.9rem; margin-bottom: 12px; padding-left: 10px; border-left: 2px solid #ccc;">
                     ${item.o.map((opt, idx) => {
                         const isCorrect = idx === item.a;
-                        return `<div style="color: ${isCorrect ? 'var(--success)' : 'inherit'}; font-weight: ${isCorrect ? 'bold' : 'normal'}; margin: 3px 0;">
-                            ${isCorrect ? '✅' : '⚪'} ${opt}
+                        // 💡 修正：此處使用 parseOptionContent(opt) 解析選項圖片
+                        const parsedOpt = parseOptionContent(opt);
+                        return `<div style="color: ${isCorrect ? 'var(--success)' : 'inherit'}; font-weight: ${isCorrect ? 'bold' : 'normal'}; margin: 6px 0;">
+                            ${isCorrect ? '✅' : '⚪'} ${parsedOpt}
                         </div>`;
                     }).join('')}
                 </div>
@@ -757,18 +759,36 @@
             const btn = document.createElement('button');
             btn.className = 'btn btn-option';
             
-            // 1. 將 innerText 改為 innerHTML，這樣才能解析選項內的 <img> 標籤
-            // 2. 同時加入一個防呆機制：如果選項資料是 "A.xxx.jpg" 這種純檔名，自動幫它轉成 <img> 標籤
-            if (typeof opt === 'string' && (opt.match(/\.(jpeg|jpg|gif|png)$/i) || opt.includes('<img'))) {
+            if (typeof opt === 'string') {
+                // 1. 如果本來就含有 <img 標籤，直接當作 HTML 處理
                 if (opt.includes('<img')) {
-                    btn.innerHTML = opt; // 如果本來就是 HTML 標籤就直接塞入
-                } else {
-                    // 如果資料庫裡只存檔名（例如 "images/A.jpg" 或 "A.jpg"），動態產生圖片
-                    const imgSrc = opt.startsWith('images/') ? opt : `images/${opt}`;
-                    btn.innerHTML = `<img src="${imgSrc}" style="max-width:150px; height:auto; display:block; margin:5px auto;">`;
+                    btn.innerHTML = opt;
+                } 
+                // 2. 終極通用防呆：尋找字串中所有以 .jpg/.png/.gif/.jpeg 結尾的單字（圖片檔名）
+                else {
+                    // 這個正則會抓出所有像 "abc.jpg"、"images/xyz.png" 的檔名
+                    const imgRegex = /[^\s|]+\.(?:jpeg|jpg|gif|png)/gi;
+                    
+                    if (imgRegex.test(opt)) {
+                        // 將原本的字串中，只要是圖片檔名的部分，通通替換成 <img> 標籤
+                        let renderedHtml = opt.replace(imgRegex, (match) => {
+                            // 確保路徑正確
+                            const imgSrc = match.startsWith('images/') ? match : `images/${match}`;
+                            // 這裡設定 display: block 讓它自己佔一行，如果想要圖文並排，可以改成 display: inline-block
+                            return `<img src="${imgSrc}" style="max-width:140px; height:auto; display:inline-block; vertical-align:middle; margin:0 5px; border-radius:4px;">`;
+                        });
+                        
+                        // 移除可能殘留的分隔符號（如 | ）讓畫面更乾淨
+                        renderedHtml = renderedHtml.replace(/\|/g, '');
+                        
+                        btn.innerHTML = renderedHtml;
+                    } else {
+                        // 沒有圖片，就是純文字
+                        btn.innerHTML = opt;
+                    }
                 }
             } else {
-                btn.innerHTML = opt; // 一般純文字選項也能正常用 innerHTML 渲染
+                btn.innerHTML = opt; 
             }
             
             btn.onclick = () => handleAnswer(idx, btn);
@@ -802,7 +822,10 @@
             clickedBtn.classList.add('wrong');
             buttons[q.a].classList.add('correct'); // 高亮提示正確答案
             
-            wrongLog.push(q);
+            // 🛠️ 修正點：避免這次測驗重複推入同一個物件
+            if (!wrongLog.some(item => item.id.toString() === q.id.toString())) {
+                wrongLog.push(q);
+            }
             
             // 答錯時，自動推入 localStorage 錯題庫
             if(!wrongStore.includes(q.id.toString())) {
@@ -830,6 +853,7 @@
         }
     }
 
+    // 🛠️ 整合更新：測驗結束後的錯題檢視清單，同步支援選項圖片顯示與口訣提示
     function showResult() {
         showScreen('screen-result');
         const scoreFinal = Math.round(currentScore);
@@ -852,9 +876,17 @@
             wrongLog.forEach(q => {
                 const item = document.createElement('div');
                 item.className = 'review-item';
+                
+                // 解析答案內容
+                const parsedCorrectAnswer = parseOptionContent(q.o[q.a]);
+                const savedNote = notesStore[q.id] ? `<div style="font-size:0.85rem; color:var(--primary); margin-top:4px;">📝 記憶口訣：${notesStore[q.id]}</div>` : '';
+
                 item.innerHTML = `
                     <div style="font-weight:bold; color:var(--text);">${q.q}</div>
-                    <div style="color:var(--success); font-weight:bold; margin-top:3px;">💡 正確解答：${q.o[q.a]}</div>
+                    <div style="color:var(--success); font-weight:bold; margin-top:5px; display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+                        <span>💡 正確解答：</span><div>${parsedCorrectAnswer}</div>
+                    </div>
+                    ${savedNote}
                 `;
                 reviewList.appendChild(item);
             });
@@ -869,7 +901,7 @@
         const quizZone = document.getElementById('quiz-action-zone');
         
         if (mode === 'wrong') {
-            if (titleLabel) titleLabel.innerText = "📌 我的錯題重溫庫 (靜態瀏覽)";
+            if (titleLabel) titleLabel.innerText = "📌 我的錯題重溫庫";
             if (quizZone) quizZone.style.display = "block"; // 錯題模式：秀出測驗快捷鈕
             
             const startBtn = document.getElementById('start-wrong-quiz-btn');
@@ -879,7 +911,7 @@
                 };
             }
         } else if (mode === 'bookmark') {
-            if (titleLabel) titleLabel.innerText = "⭐ 我的收藏題目庫 (純瀏覽)";
+            if (titleLabel) titleLabel.innerText = "⭐ 我的收藏題目庫";
             if (quizZone) quizZone.style.display = "none";  // 收藏模式：隱藏測驗按鈕
         }
         
@@ -907,6 +939,7 @@
         renderQuestion();
     }
 
+    // 🛠️ 整合更新：靜態中央控制面板（錯題本、收藏庫）全面改為 innerHTML 並引進 parseOptionContent
     function renderUniversalStaticBank() {
         const container = document.getElementById('wrong-list-container');
         const wrongCountSpan = document.getElementById('total-wrong-count');
@@ -932,10 +965,11 @@
             const card = document.createElement('div');
             card.className = 'question-card_wrong';
             
-            // 靜態瀏覽卡片動態圖片載入邏輯
             let staticImageHtml = `<img src="images/${q.id}.jpg" onerror="this.style.display='none'" style="max-width:100%; height:auto; margin:10px 0; border-radius:8px; display:block;">`;
             
-            const savedNote = notesStore[q.id] ? `💡 我的口訣：${notesStore[q.id]}` : `💡 正確答案：${q.o[q.a]}`;
+            // 💡 修正：如果正確答案是圖片，使用工具函式將其渲染出來
+            const parsedCorrectAnsText = parseOptionContent(q.o[q.a]);
+            const savedNote = notesStore[q.id] ? `💡 我的口訣：${notesStore[q.id]}` : `💡 正確答案：${parsedCorrectAnsText}`;
             const btnText = (currentStaticMode === 'bookmark') ? '❌ 取消收藏' : '❌ 移除錯題';
 
             card.innerHTML = `
@@ -950,9 +984,16 @@
                 ${staticImageHtml}
                 
                 <ul class="options-list">
-                    ${q.o.map((opt, i) => `<li class="${i === q.a ? 'correct-opt' : ''}">${opt}</li>`).join('')}
+                    ${q.o.map((opt, i) => {
+                        const isCorrect = i === q.a;
+                        // 💡 修正：解析選項中的圖片檔名
+                        const parsedOpt = parseOptionContent(opt);
+                        return `<li class="${isCorrect ? 'correct-opt' : ''}" style="margin: 5px 0;">
+                            ${isCorrect ? '🎯 ' : ''}${parsedOpt}
+                        </li>`;
+                    }).join('')}
                 </ul>
-                <div class="note-zone">${savedNote}</div>
+                <div class="note-zone" style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">${savedNote}</div>
             `;
             container.appendChild(card);
         });
@@ -1064,6 +1105,23 @@
             alert("進度已全數清空！網頁即將重新整理。");
             location.reload();
         }
+    }
+    // 🛠️ 專門用來將選項中的「圖片檔名」轉換為 <img> 標籤的工具
+    function parseOptionContent(opt) {
+        if (typeof opt !== 'string') return opt;
+        if (opt.includes('<img')) return opt; // 如果已經是 HTML 就直接返回
+
+        // 抓取 .jpg, .png, .gif, .jpeg 的檔案
+        const imgRegex = /[^\s|]+\.(?:jpeg|jpg|gif|png)/gi;
+        if (imgRegex.test(opt)) {
+            let renderedHtml = opt.replace(imgRegex, (match) => {
+                const imgSrc = match.startsWith('images/') ? match : `images/${match}`;
+                // 列表中的圖片稍微縮小一點（如 130px），排版比較好看
+                return `<img src="${imgSrc}" style="max-width:130px; height:auto; display:block; margin:6px auto; border-radius:4px;">`;
+            });
+            return renderedHtml.replace(/\|/g, ''); // 移除可能存在的豎線
+        }
+        return opt;
     }
 </script>
 </body>

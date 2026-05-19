@@ -315,6 +315,16 @@
         <div id="search-results-count" style="font-size: 0.9rem; font-weight: bold; color: var(--primary); margin-bottom: 10px;">找到 0 題</div>
         <div id="search-results-list" style="max-height: 60vh; overflow-y: auto; padding-right: 5px;"></div>
     </div>
+
+    <div id="screen-high-freq" class="screen">
+            <div style="padding: 10px; background: var(--card-bg); border-radius: 10px; margin-bottom: 15px; border: 1px solid #ddd;">
+                <button onclick="showMenu()" class="btn" style="margin-bottom: 15px; text-align: center;">⬅️ 返回主選單</button>
+                <h3 style="margin: 0 0 5px 0;">🔥 歷屆核心高頻必考題庫</h3>
+                <p style="margin: 0 0 12px 0; font-size: 0.85rem; color: var(--gray);">系統已自動幫您分析 6,000+ 道考題，彙整出重複出現的萬年精華考點。</p>
+            </div>
+            <div id="high-freq-results-count" style="font-size: 0.9rem; font-weight: bold; color: var(--primary); margin-bottom: 10px;">計算中...</div>
+            <div id="high-freq-list-container" style="max-height: 70vh; overflow-y: auto; padding-right: 5px;"></div>
+    </div>
     
     <div id="screen-menu" class="screen active">
 
@@ -365,6 +375,13 @@
         <p style="color: var(--gray); font-size: 0.9rem; margin: 20px 0 10px 0; font-weight: bold;">💡 點擊下方科目開始標準模擬測驗 (隨機40題)</p>
         
         <div id="subject-list"></div>
+
+
+        <div style="margin-bottom: 10px;">
+            <button onclick="openHighFreqLibrary()" class="btn" style="background-color: #ff6f00 !important; color: white; text-align: center; font-weight: bold; margin: 0; font-size: 1.1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                🔥 必考題庫
+            </button>
+        </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
             <button onclick="openSearch()" class="btn" style="background-color: #9a4dc9 !important; color: white; text-align: center; font-weight: bold; margin: 0;">
@@ -491,28 +508,84 @@
         }
     });
 
-    // 🛠️ 新增：提取大題庫中「題目文字重複」的核心焦點題演算法
+    // 🛠️ 升級：提取大題庫中「題目文字重複」的核心焦點題，並自動分類相近題演算法
     function extractDuplicateQuestions() {
         if (!db || db.length === 0) return [];
         
-        const qCountMap = {};
-        db.forEach(item => {
-            const cleanQ = item.q.trim();
-            qCountMap[cleanQ] = (qCountMap[cleanQ] || 0) + 1;
-        });
+        const qMap = new Map();
         
-        const uniqueDuplicates = new Map();
+        // 1. 第一次掃描：利用去標點符號的題目內文做精準「考頻合併統計」
         db.forEach(item => {
-            const cleanQ = item.q.trim();
-            if (qCountMap[cleanQ] >= 2) {
-                if (!uniqueDuplicates.has(cleanQ)) {
-                    // 打上重複頻率標籤，方便前台渲染提示
-                    const taggedItem = { ...item, frequency: qCountMap[cleanQ] };
-                    uniqueDuplicates.set(cleanQ, taggedItem);
+            // 清除空格與標點符號，避免因為格式微調導致比對失敗
+            const cleanQ = item.q.trim().replace(/[\s\s,，。、：:\uff1a\?\uff1f（）\(\)]/g, "");
+            
+            if (qMap.has(cleanQ)) {
+                const existing = qMap.get(cleanQ);
+                existing.totalFrequency += 1;
+                // 自動收集出處，例如 "111年第2次 Q18"
+                if (!existing.historyList.includes(item.s)) {
+                    existing.historyList.push(item.s);
                 }
+                // 記錄所有相同的原始題目 ID
+                if (!existing.allIds.includes(item.id)) {
+                    existing.allIds.push(item.id);
+                }
+            } else {
+                qMap.set(cleanQ, {
+                    ...item,
+                    totalFrequency: 1,
+                    historyList: [item.s],
+                    allIds: [item.id],
+                    relatedIds: [], // 用於存放觀念相近但文字不同的題目 ID
+                    tags: []
+                });
             }
         });
-        return Array.from(uniqueDuplicates.values());
+
+        let processedList = Array.from(qMap.values());
+
+        // 2. 建立專業科目核心關鍵字字典群組（用於文字不完全相同時的「自動相近題關聯」）
+        const keywordGroups = [
+            ["三相", "三角形接線", "Y形接線", "有效功率", "對稱負載"],
+            ["艉軸", "重力櫃", "密封", "落差油壓"],
+            ["安全空氣", "控制系統", "氣動閥"],
+            ["結晶結構", "滑移面", "剪應力", "分力"],
+            ["滲碳", "擴散", "Fick", "費克定律"]
+        ];
+
+        // 幫題目打上關鍵字標籤
+        processedList.forEach(item => {
+            keywordGroups.forEach(group => {
+                const hasKeyword = group.some(kw => item.q.includes(kw));
+                if (hasKeyword) {
+                    const mainTag = group[0]; // 用群組的第一個詞當作主標籤
+                    if (!item.tags.includes(mainTag)) item.tags.push(mainTag);
+                }
+            });
+        });
+
+        // 3. 自動交叉連動：只要包含相同標籤，或在歷史紀錄中重複出現的 ID，都算相近題
+        processedList.forEach(q1 => {
+            // 優先把完全一樣但不同年份的 ID 算進相近題
+            q1.allIds.forEach(id => {
+                if (id !== q1.id && !q1.relatedIds.includes(id)) q1.relatedIds.push(id);
+            });
+
+            // 根據相同考點標籤連結文字不同但觀念相近的題目
+            if (q1.tags.length === 0) return;
+            processedList.forEach(q2 => {
+                if (q1.id !== q2.id && q1.tags.some(t => q2.tags.includes(t))) {
+                    if (!q1.relatedIds.includes(q2.id) && !q1.allIds.includes(q2.id)) {
+                        q1.relatedIds.push(q2.id); // 綁定為相近觀念題
+                    }
+                }
+            });
+        });
+
+        // 4. 僅篩選出「出題次數 >= 2」的精華高頻題，並依考頻由高到低排序
+        return processedList
+            .filter(q => q.totalFrequency >= 2)
+            .sort((a, b) => b.totalFrequency - a.totalFrequency);
     }
 
     // 🛠️ 新增：啟動高頻核心焦點題模擬測驗
@@ -545,11 +618,19 @@
     function saveBookmarks() { localStorage.setItem('marine_bookmarks', JSON.stringify(bookmarks)); }
     function saveNotes() { localStorage.setItem('marine_notes_store', JSON.stringify(notesStore)); }
 
-    // --- 介面切換顯示功能 ---
+    // 🛠️ 修正後的介面切換顯示功能
     function showScreen(screenId) {
+        // 先將所有畫面上具有 screen 類別的區塊都移除 active
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        
+        // 額外確保我們新加的頁面也被關閉
+        const highFreqScreen = document.getElementById('screen-high-freq');
+        if (highFreqScreen) highFreqScreen.classList.remove('active');
+
+        // 讓目標頁面顯示出來
         const target = document.getElementById(screenId);
         if(target) target.classList.add('active');
+        
         window.scrollTo(0,0);
     }
 
@@ -671,7 +752,7 @@
     function openNotesReview() {
         isNotesOnlyReview = true;
         showScreen('screen-search');
-        document.getElementById('search-title-heading').innerText = "📝 我的考點隨身筆記題目複習";
+        document.getElementById('search-title-heading').innerText = "📝 我的隨身筆記題目複習";
         clearSearchInputs();
     }
 
@@ -1000,7 +1081,7 @@
                 <div class="btn-progress-bg" style="width: ${percent}%;"></div>
                 <div class="btn-content">
                     <div>
-                        <div class="subject-title">【科目 ${key}】${SUBJECT_NAMES[key]}</div>
+                        <div class="subject-title">${SUBJECT_NAMES[key]}</div>
                         <div class="subject-stats">目前熟練度：${masteredCount} / ${totalCount} 題 (${percent}%)</div>
                     </div>
                     <div style="font-size: 1.3rem; z-index: 3;">📝</div>
@@ -1026,12 +1107,12 @@
         const actionBtn = document.getElementById('start-wrong-quiz-btn');
         
         if (mode === 'wrong') {
-            title.innerHTML = "📌 歷屆特考 - 個人錯題檢討庫";
+            title.innerHTML = "📌 錯題檢討庫";
             actionBtn.innerHTML = "⚡ 開始錯題加強挑戰測驗";
             actionBtn.style.backgroundColor = "#dc3545";
             actionBtn.onclick = () => startSpecialQuiz('wrong');
         } else {
-            title.innerHTML = "⭐ 歷屆特考 - 我的核心收藏庫";
+            title.innerHTML = "⭐ 收藏題庫";
             actionBtn.innerHTML = "⚡ 開始收藏題隨機抽題測驗";
             actionBtn.style.backgroundColor = "#d4a017";
             actionBtn.onclick = () => startSpecialQuiz('bookmark');
@@ -1141,7 +1222,7 @@
         chartInstance = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: labels.map(l => `科目 ${l}`),
+                labels: Object.values(SUBJECT_NAMES),
                 datasets: [{
                     label: '各科熟練度 (%)',
                     data: dataValues,
@@ -1152,6 +1233,7 @@
                 }]
             },
             options: {
+                indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
@@ -1198,6 +1280,93 @@
             setTimeout(() => {
                 location.reload();
             }, 300);
+        }
+    }
+    // 🛠️ 新增：開啟核心高頻題庫面板
+    function openHighFreqLibrary() {
+        showScreen('screen-high-freq');
+        const countLabel = document.getElementById('high-freq-results-count');
+        const listContainer = document.getElementById('high-freq-list-container');
+        
+        if (!listContainer) return;
+        listContainer.innerHTML = '';
+
+        if (!highFrequencyQuiz || highFrequencyQuiz.length === 0) {
+            countLabel.innerText = "找到 0 題";
+            listContainer.innerHTML = '<div style="text-align:center; padding:20px; color:var(--gray);">目前無高頻核心題目資料。</div>';
+            return;
+        }
+
+        countLabel.innerText = `精選出歷年高頻核心考點共：${highFrequencyQuiz.length} 題`;
+
+        highFrequencyQuiz.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'question-card';
+            
+            // 建立考過的所有年份期別標籤
+            const badgesHtml = item.historyList
+                .map(h => `<span class="badge" style="background-color:#ff6f00; margin-right:5px; font-size:0.75rem;">📅 ${h}</span>`)
+                .join('');
+
+            // 使用原本的 parseOptionContent 來動態渲染 JPG 的公式/圖片選項
+            const optionsHtml = item.o.map((opt, idx) => {
+                const isCorrect = idx === item.a;
+                const parsedOpt = parseOptionContent(opt);
+                return `
+                    <div style="color: ${isCorrect ? 'var(--success)' : 'inherit'}; font-weight: ${isCorrect ? 'bold' : 'normal'}; margin: 8px 0; display: flex; align-items: center; gap: 8px;">
+                        <span>${isCorrect ? '✅' : '⚪'}</span>
+                        <div>${parsedOpt}</div>
+                    </div>
+                `;
+            }).join('');
+
+            // 建立相近題目/變形題清單的 HTML
+            let relatedBoxHtml = '';
+            if (item.relatedIds && item.relatedIds.length > 0) {
+                // 從原始大題庫撈出這些相近 ID 的基本資訊
+                const relatedItemsHtml = db.filter(rawItem => item.relatedIds.includes(rawItem.id))
+                    .map(rawItem => `
+                        <div style="padding: 8px; background: rgba(0,0,0,0.02); border-left: 3px solid var(--primary); margin-top: 6px; font-size: 0.85rem; border-radius: 0 4px 4px 0;">
+                            <strong style="color:var(--primary);">${rawItem.s || rawItem.id}：</strong> ${rawItem.q}
+                        </div>
+                    `).join('');
+
+                relatedBoxHtml = `
+                    <div style="margin-top:12px; border-top: 1px dashed #ddd; padding-top: 8px;">
+                        <button onclick="toggleRelatedBox('${item.id}')" style="background:none; border:none; color:var(--primary); font-weight:bold; cursor:pointer; font-size:0.85rem; padding:0;">
+                            💡 點擊展開/收合相近題目題庫 (${item.relatedIds.length} 題) ▾
+                        </button>
+                        <div id="related-box-${item.id}" style="display:none; margin-top:5px; max-height:200px; overflow-y:auto;">
+                            ${relatedItemsHtml}
+                        </div>
+                    </div>
+                `;
+            }
+
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                    <div>${badgesHtml}</div>
+                    <div style="font-weight:bold; color:#ff6f00; font-size:0.85rem; background:rgba(255,111,0,0.1); padding:2px 8px; border-radius:12px;">
+                        重現度：${item.totalFrequency} 次
+                    </div>
+                </div>
+                <div style="font-weight: bold; margin-bottom: 10px; color: var(--text); line-height:1.5;">${item.q}</div>
+                
+                <div style="font-size: 0.95rem; margin-bottom: 8px; padding-left: 5px;">
+                    ${optionsHtml}
+                </div>
+                
+                ${relatedBoxHtml}
+            `;
+            listContainer.appendChild(div);
+        });
+    }
+
+    // 🛠️ 新增：切換相近題目的收合狀態
+    function toggleRelatedBox(id) {
+        const box = document.getElementById(`related-box-${id}`);
+        if (box) {
+            box.style.display = box.style.display === 'none' ? 'block' : 'none';
         }
     }
 </script>

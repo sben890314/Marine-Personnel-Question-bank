@@ -922,15 +922,22 @@
         renderQuestion();
     }
 
-    // 🛠️ 升級：測驗畫面支援「高頻核心出題標籤」動態偵測顯示
+   // 🛠️ 修正版：測驗畫面支援「高頻核心出題標籤」動態偵測顯示（防爆加強版）
     function renderQuestion() {
         const q = currentQuiz[currentIndex];
+        if (!q) return; // 安全防呆
+
         const isBookmarked = bookmarks.includes(q.id.toString()) || bookmarks.includes(Number(q.id));
         const subjectTxt = SUBJECT_NAMES[q.subject] || "輪機科目";
         
-        // 檢查在 highFrequencyQuiz 或是目前隨機物件上是否帶有高頻次數
-        const matchedFreqObj = highFrequencyQuiz.find(f => f.q.trim() === q.q.trim());
-        const freqBadge = matchedFreqObj ? `<span style="background:#ff4d4d; color:white; padding:2px 6px; border-radius:4px; font-size:0.75rem; margin-left:8px; font-weight:bold;">🔥 歷屆重複出題: ${matchedFreqObj.frequency} 次</span>` : '';
+        // 🛠️ 【修正點 1】將 .frequency 改為對應演算法的 .totalFrequency，解決 undefined 問題！
+        let freqBadge = '';
+        if (highFrequencyQuiz && highFrequencyQuiz.length > 0) {
+            const matchedFreqObj = highFrequencyQuiz.find(f => f.q.trim() === q.q.trim());
+            if (matchedFreqObj && matchedFreqObj.totalFrequency) {
+                freqBadge = `<span style="background:#ff4d4d; color:white; padding:2px 6px; border-radius:4px; font-size:0.75rem; margin-left:8px; font-weight:bold;">🔥 歷屆重複出題: ${matchedFreqObj.totalFrequency} 次</span>`;
+            }
+        }
         
         let questionImageHtml = `<img src="images/${q.id}.jpg" onerror="this.style.display='none'" style="max-width:100%; height:auto; margin-top:10px; border-radius:8px; display:block;">`;
         
@@ -954,31 +961,23 @@
         container.innerHTML = '';
         document.getElementById('btn-next').style.display = 'none';
 
-        q.o.forEach((opt, idx) => {
-            const btn = document.createElement('button');
-            btn.className = 'btn btn-option';
-            
-            if (typeof opt === 'string') {
-                if (opt.includes('<img')) {
-                    btn.innerHTML = opt;
+        // 🛠️ 【修正點 2】健全選項渲染與安全解析防護，避免答錯渲染時崩潰
+        if (q.o && Array.isArray(q.o)) {
+            q.o.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-option';
+                
+                // 統一調用你原本寫好的防爆圖片解析函式 parseOptionContent 處理選項
+                if (typeof parseOptionContent === "function") {
+                    btn.innerHTML = `${String.fromCharCode(65 + idx)}. ${parseOptionContent(opt)}`;
                 } else {
-                    const imgRegex = /[^\s|]+\.(?:jpeg|jpg|gif|png)/gi;
-                    if (imgRegex.test(opt)) {
-                        let renderedHtml = opt.replace(imgRegex, (match) => {
-                            return `<img src="images/${match}" style="max-width:100%; height:auto; display:block; margin-top:5px;">`;
-                        });
-                        btn.innerHTML = renderedHtml;
-                    } else {
-                        btn.innerText = opt;
-                    }
+                    btn.innerText = `${String.fromCharCode(65 + idx)}. ${opt}`;
                 }
-            } else {
-                btn.innerText = opt;
-            }
 
-            btn.onclick = () => checkAnswer(idx, btn);
-            container.appendChild(btn);
-        });
+                btn.onclick = () => checkAnswer(idx, btn);
+                container.appendChild(btn);
+            });
+        }
     }
 
     function checkAnswer(selectedIdx, clickedBtn) {

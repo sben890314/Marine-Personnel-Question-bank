@@ -285,6 +285,30 @@
             font-size: 0.85rem;
             border-left: 4px solid var(--primary);
         }
+
+            /* 🛠️ 手機端防卡死與防裁切優化 */
+    @media (max-width: 768px) {
+        .container {
+            /* 移除可能導致手機瀏覽器卡死滾動的衝突屬性 */
+            overflow-y: visible !important; 
+            height: auto !important;
+            padding: 12px; /* 稍微縮小手機版內邊距，騰出更多垂直空間 */
+        }
+
+        .question-card {
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        /* 讓手機版的下一題按鈕更大、更好按 */
+        #btn-next {
+            padding: 16px !important;
+            font-size: 1.1rem !important;
+            margin-top: 20px !important;
+            box-shadow: 0 4px 12px rgba(0, 95, 153, 0.3);
+        }
+    }
+
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -996,16 +1020,33 @@
         // 更新進度條
         const progressPercent = ((currentIndex + 1) / currentQuiz.length) * 100;
         document.getElementById('session-bar').style.width = `${progressPercent}%`;
+        const nextBtn = document.getElementById("btn-next");
+        if (nextBtn) {
+            nextBtn.style.display = "block";
+        
+            // 🛠️ 【新增這行】讓手機瀏覽器自動向下滾動對焦到「下一題」按鈕，再也不怕被擠出螢幕！
+            setTimeout(() => {
+                nextBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100); // 稍微延遲 100 毫秒確保 DOM 渲染完全
+        }
     }
 
     function nextQuestion() {
         currentIndex++;
         if (currentIndex < currentQuiz.length) {
             renderQuestion();
+        } // 寫完了，強制進入結算畫面
+        showScreen('screen-result');
+        
+        // 呼叫結算邏輯 (把分數算出來並丟進 UI)
+        if (typeof showFinalResult === "function") {
+            showFinalResult();
         } else {
-            finishQuiz();
+            // 如果你原本的結算寫在別的地方，可以用最基本的顯示
+            document.getElementById("final-score").innerText = currentScore;
         }
     }
+    
 
     function quitQuiz() {
         if(confirm("確定要結束本次測驗並提前結算分數嗎？")) {

@@ -434,11 +434,16 @@
                 <span id="q-count">1/40</span>
                 <span id="q-score">得分: 0</span>
             </div>
+            <div style="width: 100%; background: rgba(0,0,0,0.05); height: 6px; border-radius: 3px; margin-bottom: 15px;">
+                <div id="session-bar" style="width: 0%; background: #007bff; height: 100%; border-radius: 3px; transition: width 0.2s;"></div>
+            </div>
             <div id="q-text" style="font-weight:bold; font-size:1.1rem; margin-bottom:15px; line-height:1.5;"></div>
             <div id="options-container"></div>
         </div>
-        <button id="btn-next" class="btn btn-primary" onclick="nextQuestion()" style="display:none;">下一題</button>
-        <button class="btn btn-secondary" onclick="quitQuiz()">結束測驗並結算</button>
+        
+        <button id="btn-next" class="btn btn-primary" onclick="nextQuestion()" style="display:none; width:100%; padding:14px; margin-top:15px; margin-bottom:10px; font-size:1.1rem; font-weight:bold; background-color:#007bff !important; border:none; border-radius:8px; color:white; cursor:pointer;">➡️ 跳下一題</button>
+        
+        <button class="btn btn-secondary" onclick="quitQuiz()" style="width:100%; padding:10px; opacity:0.8;">結束測驗並結算</button>
     </div>
 
     <div id="wrong-questions-bank" class="screen">
@@ -981,60 +986,62 @@
     }
 
     function checkAnswer(selectedIdx, clickedBtn) {
-        const q = currentQuiz[currentIndex];
-        const buttons = document.querySelectorAll('.btn-option');
-        buttons.forEach(b => b.disabled = true);
+        try {
+            const q = currentQuiz[currentIndex];
+            const buttons = document.querySelectorAll('.btn-option');
+            buttons.forEach(b => b.disabled = true);
 
-        if (selectedIdx === q.a) {
-            clickedBtn.classList.add('correct');
-            currentScore += 2.5; 
-            
-            // 精熟度加分邏輯
-            if (q.subject && masteryData[q.subject]) {
-                if (!masteryData[q.subject].includes(q.id.toString())) {
-                    masteryData[q.subject].push(q.id.toString());
+            if (selectedIdx === q.a) {
+                clickedBtn.classList.add('correct');
+                currentScore += 2.5; 
+                
+                if (q.subject && masteryData[q.subject]) {
+                    if (!masteryData[q.subject].includes(q.id.toString())) {
+                        masteryData[q.subject].push(q.id.toString());
+                    }
+                }
+            } else {
+                clickedBtn.classList.add('wrong');
+                if (buttons[q.a]) buttons[q.a].classList.add('correct');
+                wrongLog.push(q);
+                
+                if (!wrongStore.some(item => item.id.toString() === q.id.toString())) {
+                    wrongStore.push(q);
+                    localStorage.setItem(WRONG_STORAGE_KEY, JSON.stringify(wrongStore));
+                }
+
+                if (q.subject && masteryData[q.subject]) {
+                    const mIdx = masteryData[q.subject].indexOf(q.id.toString());
+                    if (mIdx !== -1) masteryData[q.subject].splice(mIdx, 1);
                 }
             }
-        } else {
-            clickedBtn.classList.add('wrong');
-            // 防呆：確保正確答案的索引按鈕存在才加 class
-            if (buttons[q.a]) buttons[q.a].classList.add('correct');
-            wrongLog.push(q);
             
-            // 寫入錯題庫
-            if (!wrongStore.some(item => item.id.toString() === q.id.toString())) {
-                wrongStore.push(q);
-                localStorage.setItem(WRONG_STORAGE_KEY, JSON.stringify(wrongStore));
+            if (typeof STORAGE_KEY !== 'undefined') {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(masteryData));
             }
+            if (typeof drawChart === 'function') drawChart();
 
-            // 扣除熟練度
-            if (q.subject && masteryData[q.subject]) {
-                const mIdx = masteryData[q.subject].indexOf(q.id.toString());
-                if (mIdx !== -1) masteryData[q.subject].splice(mIdx, 1);
+            document.getElementById('q-score').innerText = `得分: ${currentScore}`;
+            
+            // 更新進度條
+            const progressPercent = ((currentIndex + 1) / currentQuiz.length) * 100;
+            const sessionBar = document.getElementById('session-bar');
+            if (sessionBar) sessionBar.style.width = `${progressPercent}%`;
+
+        } catch (err) {
+            console.error("⚠️ 答題核心計算有誤，已自動啟動防護跳過錯誤:", err);
+        } finally {
+            // 🎯 【終極殺招】不論上面 try 裡面有沒有噴錯誤，finally 區塊都一定會強制執行！
+            // 這能確保「下一題」按鈕絕對百分之百會亮出來，不會再被任何 JS 崩潰卡死！
+            const nextBtn = document.getElementById("btn-next");
+            if (nextBtn) {
+                nextBtn.style.display = "block";
+                
+                // 自動為手機版做滾動平滑對焦
+                setTimeout(() => {
+                    nextBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 80);
             }
-        }
-        
-        // 🔹 儲存最新熟練度，並即時重繪圖表（讓主頁圖表更新）
-        if (typeof MASTERY_STORAGE_KEY !== 'undefined') {
-            localStorage.setItem(MASTERY_STORAGE_KEY, JSON.stringify(masteryData));
-        }
-        if (typeof drawChart === 'function') drawChart();
-
-        document.getElementById('q-score').innerText = `得分: ${currentScore}`;
-        
-        // 更新進度條
-        const progressPercent = ((currentIndex + 1) / currentQuiz.length) * 100;
-        const sessionBar = document.getElementById('session-bar');
-        if (sessionBar) sessionBar.style.width = `${progressPercent}%`;
-
-        const nextBtn = document.getElementById("btn-next");
-        if (nextBtn) {
-            nextBtn.style.display = "block";
-        
-            // 🛠️ 讓手機瀏覽器自動向下滾動對焦到「下一題」按鈕
-            setTimeout(() => {
-                nextBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }, 100);
         }
     }
 

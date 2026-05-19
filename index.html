@@ -299,7 +299,7 @@
     <div id="screen-search" class="screen">
         <div style="padding: 10px; background: var(--card-bg); border-radius: 10px; margin-bottom: 15px; border: 1px solid #ddd;">
             <button onclick="showMenu()" class="btn" style="margin-bottom: 15px; text-align: center;">⬅️ 返回主選單</button>
-            <h3 style="margin: 0 0 10px 0;" id="search-title-heading">🔍 全題庫高階瀏覽與搜尋</h3>
+            <h3 style="margin: 0 0 10px 0;" id="search-title-heading">🔍 題庫瀏覽與搜尋</h3>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
                 <select id="search-filter-year" onchange="runSearch(document.getElementById('search-input').value)" style="padding: 8px; border-radius: 6px; background: var(--bg); color: var(--text); border: 1px solid #ccc; font-family: inherit;"></select>
@@ -339,7 +339,7 @@
         </div>
 
         <div class="filter-panel" style="background: var(--card-bg); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #ccc;">
-            <h3 style="margin-top:0;">🎯 高階多功能篩選題庫</h3>
+            <h3 style="margin-top:0;">🎯 題庫篩選測驗</h3>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
                 <select id="filter-year" onchange="calculateFilteredCount()"></select>
                 <select id="filter-term" onchange="calculateFilteredCount()"></select>
@@ -596,7 +596,7 @@
     function openSearch() {
         isNotesOnlyReview = false;
         showScreen('screen-search');
-        document.getElementById('search-title-heading').innerText = "🔍 全題庫高階瀏覽與搜尋";
+        document.getElementById('search-title-heading').innerText = "🔍 題庫瀏覽與搜尋";
         clearSearchInputs();
     }
 
@@ -731,7 +731,6 @@
         const isBookmarked = bookmarks.includes(q.id.toString()) || bookmarks.includes(Number(q.id));
         const subjectTxt = SUBJECT_NAMES[q.subject] || "輪機科目";
         
-        // 測驗畫面動態圖片載入
         let questionImageHtml = `<img src="images/${q.id}.jpg" onerror="this.style.display='none'" style="max-width:100%; height:auto; margin-top:10px; border-radius:8px; display:block;">`;
         
         document.getElementById('q-count').innerText = `${currentIndex + 1} / ${currentQuiz.length}`;
@@ -754,36 +753,25 @@
         container.innerHTML = '';
         document.getElementById('btn-next').style.display = 'none';
 
-        // === 🛠️ 修正這段迴圈 ===
         q.o.forEach((opt, idx) => {
             const btn = document.createElement('button');
             btn.className = 'btn btn-option';
             
             if (typeof opt === 'string') {
-                // 1. 如果本來就含有 <img 標籤，直接當作 HTML 處理
                 if (opt.includes('<img')) {
                     btn.innerHTML = opt;
-                } 
-                // 2. 終極通用防呆：尋找字串中所有以 .jpg/.png/.gif/.jpeg 結尾的單字（圖片檔名）
-                else {
-                    // 這個正則會抓出所有像 "abc.jpg"、"images/xyz.png" 的檔名
+                } else {
                     const imgRegex = /[^\s|]+\.(?:jpeg|jpg|gif|png)/gi;
                     
                     if (imgRegex.test(opt)) {
-                        // 將原本的字串中，只要是圖片檔名的部分，通通替換成 <img> 標籤
                         let renderedHtml = opt.replace(imgRegex, (match) => {
-                            // 確保路徑正確
                             const imgSrc = match.startsWith('images/') ? match : `images/${match}`;
-                            // 這裡設定 display: block 讓它自己佔一行，如果想要圖文並排，可以改成 display: inline-block
                             return `<img src="${imgSrc}" style="max-width:140px; height:auto; display:inline-block; vertical-align:middle; margin:0 5px; border-radius:4px;">`;
                         });
                         
-                        // 移除可能殘留的分隔符號（如 | ）讓畫面更乾淨
                         renderedHtml = renderedHtml.replace(/\|/g, '');
-                        
                         btn.innerHTML = renderedHtml;
                     } else {
-                        // 沒有圖片，就是純文字
                         btn.innerHTML = opt;
                     }
                 }
@@ -794,7 +782,7 @@
             btn.onclick = () => handleAnswer(idx, btn);
             container.appendChild(btn);
         });
-        // 更新頂端微型進度條
+
         const progressPercent = ((currentIndex) / currentQuiz.length) * 100;
         document.getElementById('session-bar').style.width = `${progressPercent}%`;
     }
@@ -804,13 +792,12 @@
         const container = document.getElementById('options-container');
         const buttons = container.querySelectorAll('.btn-option');
         
-        buttons.forEach(b => b.disabled = true); // 鎖定按鈕防止重複點擊
+        buttons.forEach(b => b.disabled = true); 
 
         if (selectedIndex === q.a) {
             clickedBtn.classList.add('correct');
             currentScore += (100 / currentQuiz.length);
             
-            // 答對時，如果是在標準隨機考，將該題寫入熟練白名單
             if(!currentSubject.includes("MODE") && !currentSubject.includes("FILTER")) {
                 if(!masteryData[q.subject]) masteryData[q.subject] = [];
                 if(!masteryData[q.subject].includes(q.id.toString())) {
@@ -820,14 +807,12 @@
             }
         } else {
             clickedBtn.classList.add('wrong');
-            buttons[q.a].classList.add('correct'); // 高亮提示正確答案
+            buttons[q.a].classList.add('correct'); 
             
-            // 🛠️ 修正點：避免這次測驗重複推入同一個物件
             if (!wrongLog.some(item => item.id.toString() === q.id.toString())) {
                 wrongLog.push(q);
             }
             
-            // 答錯時，自動推入 localStorage 錯題庫
             if(!wrongStore.includes(q.id.toString())) {
                 wrongStore.push(q.id.toString());
                 localStorage.setItem(WRONG_STORAGE_KEY, JSON.stringify(wrongStore));
@@ -902,7 +887,7 @@
         
         if (mode === 'wrong') {
             if (titleLabel) titleLabel.innerText = "📌 我的錯題重溫庫";
-            if (quizZone) quizZone.style.display = "block"; // 錯題模式：秀出測驗快捷鈕
+            if (quizZone) quizZone.style.display = "block"; 
             
             const startBtn = document.getElementById('start-wrong-quiz-btn');
             if (startBtn) {
@@ -912,7 +897,7 @@
             }
         } else if (mode === 'bookmark') {
             if (titleLabel) titleLabel.innerText = "⭐ 我的收藏題目庫";
-            if (quizZone) quizZone.style.display = "none";  // 收藏模式：隱藏測驗按鈕
+            if (quizZone) quizZone.style.display = "none";  
         }
         
         showScreen('wrong-questions-bank');
@@ -1049,7 +1034,6 @@
             listContainer.appendChild(btn);
         }
 
-        // 重新渲染 Chart.js 熟練度雷達圖
         const ctx = document.getElementById('masteryChart');
         if (ctx) {
             if (chartInstance) chartInstance.destroy();
@@ -1106,20 +1090,19 @@
             location.reload();
         }
     }
+
     // 🛠️ 專門用來將選項中的「圖片檔名」轉換為 <img> 標籤的工具
     function parseOptionContent(opt) {
         if (typeof opt !== 'string') return opt;
-        if (opt.includes('<img')) return opt; // 如果已經是 HTML 就直接返回
+        if (opt.includes('<img')) return opt; 
 
-        // 抓取 .jpg, .png, .gif, .jpeg 的檔案
         const imgRegex = /[^\s|]+\.(?:jpeg|jpg|gif|png)/gi;
         if (imgRegex.test(opt)) {
             let renderedHtml = opt.replace(imgRegex, (match) => {
                 const imgSrc = match.startsWith('images/') ? match : `images/${match}`;
-                // 列表中的圖片稍微縮小一點（如 130px），排版比較好看
                 return `<img src="${imgSrc}" style="max-width:130px; height:auto; display:block; margin:6px auto; border-radius:4px;">`;
             });
-            return renderedHtml.replace(/\|/g, ''); // 移除可能存在的豎線
+            return renderedHtml.replace(/\|/g, ''); 
         }
         return opt;
     }

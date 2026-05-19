@@ -998,7 +998,8 @@
             }
         } else {
             clickedBtn.classList.add('wrong');
-            buttons[q.a].classList.add('correct');
+            // 防呆：確保正確答案的索引按鈕存在才加 class
+            if (buttons[q.a]) buttons[q.a].classList.add('correct');
             wrongLog.push(q);
             
             // 寫入錯題庫
@@ -1014,36 +1015,49 @@
             }
         }
         
+        // 🔹 儲存最新熟練度，並即時重繪圖表（讓主頁圖表更新）
+        if (typeof MASTERY_STORAGE_KEY !== 'undefined') {
+            localStorage.setItem(MASTERY_STORAGE_KEY, JSON.stringify(masteryData));
+        }
+        if (typeof drawChart === 'function') drawChart();
+
         document.getElementById('q-score').innerText = `得分: ${currentScore}`;
-        document.getElementById('btn-next').style.display = 'block';
         
         // 更新進度條
         const progressPercent = ((currentIndex + 1) / currentQuiz.length) * 100;
-        document.getElementById('session-bar').style.width = `${progressPercent}%`;
+        const sessionBar = document.getElementById('session-bar');
+        if (sessionBar) sessionBar.style.width = `${progressPercent}%`;
+
         const nextBtn = document.getElementById("btn-next");
         if (nextBtn) {
             nextBtn.style.display = "block";
         
-            // 🛠️ 【新增這行】讓手機瀏覽器自動向下滾動對焦到「下一題」按鈕，再也不怕被擠出螢幕！
+            // 🛠️ 讓手機瀏覽器自動向下滾動對焦到「下一題」按鈕
             setTimeout(() => {
                 nextBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }, 100); // 稍微延遲 100 毫秒確保 DOM 渲染完全
+            }, 100);
         }
     }
 
+    // 🛠️ 修正後的下一題控制邏輯
     function nextQuestion() {
         currentIndex++;
-        if (currentIndex < currentQuiz.length) {
-            renderQuestion();
-        } // 寫完了，強制進入結算畫面
-        showScreen('screen-result');
         
-        // 呼叫結算邏輯 (把分數算出來並丟進 UI)
-        if (typeof showFinalResult === "function") {
-            showFinalResult();
+        if (currentIndex < currentQuiz.length) {
+            // A. 還有題目：渲染下一題，並且把畫面滾回最上方
+            renderQuestion();
+            window.scrollTo(0, 0); 
         } else {
-            // 如果你原本的結算寫在別的地方，可以用最基本的顯示
-            document.getElementById("final-score").innerText = currentScore;
+            // B. 沒題目了：這時候才可以進入結算畫面！
+            showScreen('screen-result');
+            
+            // 呼叫結算邏輯 (把分數算出來並丟進 UI)
+            if (typeof showFinalResult === "function") {
+                showFinalResult();
+            } else {
+                const finalScoreBtn = document.getElementById("final-score");
+                if (finalScoreBtn) finalScoreBtn.innerText = currentScore;
+            }
         }
     }
     

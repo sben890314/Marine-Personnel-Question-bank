@@ -752,14 +752,28 @@
         container.innerHTML = '';
         document.getElementById('btn-next').style.display = 'none';
 
+        // === 🛠️ 修正這段迴圈 ===
         q.o.forEach((opt, idx) => {
             const btn = document.createElement('button');
             btn.className = 'btn btn-option';
-            btn.innerText = opt;
+            
+            // 1. 將 innerText 改為 innerHTML，這樣才能解析選項內的 <img> 標籤
+            // 2. 同時加入一個防呆機制：如果選項資料是 "A.xxx.jpg" 這種純檔名，自動幫它轉成 <img> 標籤
+            if (typeof opt === 'string' && (opt.match(/\.(jpeg|jpg|gif|png)$/i) || opt.includes('<img'))) {
+                if (opt.includes('<img')) {
+                    btn.innerHTML = opt; // 如果本來就是 HTML 標籤就直接塞入
+                } else {
+                    // 如果資料庫裡只存檔名（例如 "images/A.jpg" 或 "A.jpg"），動態產生圖片
+                    const imgSrc = opt.startsWith('images/') ? opt : `images/${opt}`;
+                    btn.innerHTML = `<img src="${imgSrc}" style="max-width:150px; height:auto; display:block; margin:5px auto;">`;
+                }
+            } else {
+                btn.innerHTML = opt; // 一般純文字選項也能正常用 innerHTML 渲染
+            }
+            
             btn.onclick = () => handleAnswer(idx, btn);
             container.appendChild(btn);
         });
-
         // 更新頂端微型進度條
         const progressPercent = ((currentIndex) / currentQuiz.length) * 100;
         document.getElementById('session-bar').style.width = `${progressPercent}%`;

@@ -1204,7 +1204,7 @@
     function drawChart() {
         const ctx = document.getElementById('masteryChart');
         if(!ctx) return;
-        
+    
         const labels = Object.keys(SUBJECT_NAMES);
         const dataValues = labels.map(key => {
             const total = db.filter(q => q.subject === key).length;
@@ -1212,13 +1212,24 @@
             return total > 0 ? Math.round((mastered / total) * 100) : 0;
         });
 
+        // 動態獲取目前當下的 CSS 變數顏色
+        const textColor = getComputedStyle(document.body).getPropertyValue('--text').trim() || '#333333';
+
+        // 如果圖表已經存在，更新數據與所有文字顏色
         if (chartInstance) {
             chartInstance.data.datasets[0].data = dataValues;
-            chartInstance.options.plugins.legend.labels.color = getComputedStyle(document.body).getPropertyValue('--text').trim();
+        
+            // 1. 更新圖例顏色
+            chartInstance.options.plugins.legend.labels.color = textColor;
+            // 2. 更新 X 軸與 Y 軸標籤文字顏色
+            chartInstance.options.scales.x.ticks.color = textColor;
+            chartInstance.options.scales.y.ticks.color = textColor;
+        
             chartInstance.update();
             return;
         }
 
+        // 第一次建立圖表
         chartInstance = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -1233,15 +1244,25 @@
                 }]
             },
             options: {
-                indexAxis: 'y',
+                indexAxis: 'y', // 改為水平條形圖
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    y: { beginAtZero: true, max: 100, ticks: { color: 'inherit' } },
-                    x: { ticks: { color: 'inherit' } }
+                    // 因轉成水平圖，X 軸變為數據軸（％ 數），要把 max: 100 設定在這裡
+                    x: { 
+                        beginAtZero: true, 
+                        max: 100, 
+                        ticks: { color: textColor } 
+                    },
+                    // Y 軸變為標籤軸（科目名稱）
+                    y: { 
+                        ticks: { color: textColor } 
+                    }
                 },
                 plugins: {
-                    legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text').trim() } }
+                    legend: { 
+                        labels: { color: textColor } 
+                    }
                 }
             }
         });
@@ -1260,6 +1281,7 @@
                 chartInstance.update();
             }, 50);
         }
+        drawChart();
     }
 
     // --- 進度精確清除與重設緩衝處理 ---

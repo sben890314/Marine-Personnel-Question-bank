@@ -378,8 +378,8 @@
             <h3 style="margin: 0 0 10px 0;" id="search-title-heading">🔍 題庫瀏覽與搜尋</h3>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-                <select id="search-filter-year" onchange="runSearch(document.getElementById('search-input').value)" style="padding: 8px; border-radius: 6px; background: var(--bg); color: var(--text); border: 1px solid #ccc; font-family: inherit;"></select>
-                <select id="search-filter-term" onchange="runSearch(document.getElementById('search-input').value)" style="padding: 8px; border-radius: 6px; background: var(--bg); color: var(--text); border: 1px solid #ccc; font-family: inherit;"></select>
+                <select id="search-filter-year" onchange="triggerSearchFromFilters()"  style="padding: 8px; border-radius: 6px; background: var(--bg); color: var(--text); border: 1px solid #ccc; font-family: inherit;"></select>
+                <select id="search-filter-term" onchange="triggerSearchFromFilters()"  style="padding: 8px; border-radius: 6px; background: var(--bg); color: var(--text); border: 1px solid #ccc; font-family: inherit;"></select>
             </div>
             <div style="margin-bottom: 12px;">
                 <select id="search-filter-subject" onchange="runSearch(document.getElementById('search-input').value)" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--bg); color: var(--text); border: 1px solid #ccc; font-family: inherit;"></select>

@@ -788,7 +788,7 @@
         const subjectName = SUBJECT_NAMES[item.subject] || "綜合科目";
         const isBookmarked = bookmarks.includes(item.id.toString()) || bookmarks.includes(Number(item.id));
         const bookmarkText = isBookmarked ? "⭐ 已收藏" : "📁 收藏此題";
-        const tag = (currentStaticMode === 'wrong') ? "wrong-tag" : "source-tag";
+        
 
         let imgHtml = `<img src="images/${item.id}.jpg" onerror="this.style.display='none'" style="max-width:100%; height:auto; margin:12px 0; border-radius:8px; display:block;">`;
 
@@ -805,7 +805,12 @@
         }
 
         return
-        
+        if (currentStaticMode === 'wrong') {
+        tag = "wrong-tag";
+        }
+        else {
+        tag = "source-tag"
+        }
         `
             <div class="question-card_wrong" style="background:var(--card-bg, #ffffff); padding:16px; border-radius:12px; margin-bottom:16px; border:1px solid #e0e0e0; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; gap:8px;">

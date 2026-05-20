@@ -1015,7 +1015,7 @@
 
         document.getElementById('q-count').innerText = `${currentIndex + 1} / ${currentQuiz.length} 題`;
         // 精準同步顯示目前答對的題數
-        document.getElementById('q-score').innerText = `目前得分: ${currentScore} 題`;
+        document.getElementById('q-score').innerText = `得分: ${currentScore} `;
 
         const progressPercent = ((currentIndex) / currentQuiz.length) * 100;
         if(document.getElementById('quiz-progress-bar')) {
@@ -1060,8 +1060,8 @@
             clickedBtn.style.borderColor = 'var(--success)';
             clickedBtn.style.backgroundColor = 'rgba(40,167,69,0.15)';
             clickedBtn.style.fontWeight = 'bold';
-            currentScore++; // 真實計分累加
-            document.getElementById('q-score').innerText = `目前得分: ${currentScore} 題`;
+            currentScore+=2.5; // 真實計分累加
+            document.getElementById('q-score').innerText = `得分: ${currentScore} `;
 
             if(currentSubject && SUBJECT_NAMES[currentSubject]) {
                 if(!masteryData[currentSubject]) masteryData[currentSubject] = [];
@@ -1116,10 +1116,10 @@
         
         // 修正：確實將分子分母對接。分母為目前實際已做/回答的題目總數（防止提早結束時分母算錯）
         const totalAnsweredQuestions = currentIndex + 1;
-        const finalPercentageScore = totalAnsweredQuestions > 0 ? Math.round((currentScore / totalAnsweredQuestions) * 100) : 0;
+        const finalPercentageScore = totalAnsweredQuestions > 0 ? Math.round((currentScore / currentQuiz.length) * 100) : 0;
         
         // 更新結算畫面的分數顯示
-        document.getElementById('result-score-title').innerText = `測驗完成！答對 ${currentScore} 題 / 共 ${totalAnsweredQuestions} 題`;
+        document.getElementById('result-score-title').innerText = `測驗完成！答對 ${currentScore} 題 / 共 ${currentQuiz.length} 題`;
         document.getElementById('final-score').innerText = `${finalPercentageScore} 分`;
 
         let msg = "";

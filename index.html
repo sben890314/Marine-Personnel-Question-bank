@@ -690,6 +690,7 @@
         currentSubject = "COMBINED_FILTER";
         currentIndex = 0;
         currentScore = 0;
+        currentQuestion = 0;
         wrongLog = [];
         showScreen('screen-quiz');
         renderQuestion();
@@ -720,6 +721,7 @@
         currentSubject = "SPECIAL_BANK_MODE";
         currentIndex = 0;
         currentScore = 0;
+        currentQuestion = 0;
         wrongLog = [];
         showScreen('screen-quiz');
         renderQuestion();
@@ -915,6 +917,7 @@
         currentSubject = hfSelectVal === 'all' ? "HIGH_FREQUENCY_ALL" : `HIGH_FREQUENCY_${hfSelectVal}`;
         currentIndex = 0;
         currentScore = 0;
+        currentQuestion = 0;
         wrongLog = [];
         showScreen('screen-quiz');
         renderQuestion();
@@ -996,6 +999,7 @@
         currentQuiz = pool.sort(() => 0.5 - Math.random()).slice(0, 40);
         currentIndex = 0;
         currentScore = 0;
+        currentQuestion = 0;
         wrongLog = [];
         showScreen('screen-quiz');
         renderQuestion();

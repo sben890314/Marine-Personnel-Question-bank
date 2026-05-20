@@ -341,13 +341,24 @@
     </div>
 
     <div id="screen-high-freq" class="screen">
-            <div style="padding: 10px; background: var(--card-bg); border-radius: 10px; margin-bottom: 15px; border: 1px solid #ddd;">
-                <button onclick="showMenu()" class="btn" style="margin-bottom: 15px; text-align: center;">⬅️ 返回主選單</button>
-                <h3 style="margin: 0 0 5px 0;">🔥 歷屆核心高頻必考題庫</h3>
-                <p style="margin: 0 0 12px 0; font-size: 0.85rem; color: var(--gray);">系統已自動幫您分析 6,000+ 道考題，彙整出重複出現的萬年精華考點。</p>
+        <div style="padding: 10px; background: var(--card-bg); border-radius: 10px; margin-bottom: 15px; border: 1px solid #ddd;">
+            <button onclick="showMenu()" class="btn" style="margin-bottom: 15px; text-align: center;">⬅️ 返回主選單</button>
+            <h3 style="margin: 0 0 5px 0;">🔥 歷屆核心高頻必考題庫</h3>
+            <p style="margin: 0 0 12px 0; font-size: 0.85rem; color: var(--gray);">系統已自動幫您分析 6,000+ 道考題，彙整出重複出現的萬年精華考點。</p>
+            
+            <div style="margin-bottom: 12px; border-top: 1px dashed #ccc; padding-top: 10px;">
+                <strong style="font-size: 0.85rem; display: block; margin-bottom: 5px;">📍 選擇必考科目：</strong>
+                <select id="high-freq-filter-subject" onchange="runHighFrequencySearch()" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--bg); color: var(--text); border: 1px solid #ccc; font-family: inherit;"></select>
             </div>
-            <div id="high-freq-results-count" style="font-size: 0.9rem; font-weight: bold; color: var(--primary); margin-bottom: 10px;">計算中...</div>
-            <div id="high-freq-list-container" style="max-height: 70vh; overflow-y: auto; padding-right: 5px;"></div>
+
+            <div style="border-top: 1px dashed #ccc; padding-top: 10px; text-align: center;">
+                <button onclick="startHighFrequencyQuiz()" class="btn" style="background: #ff6f00; color: white; padding: 10px 15px; border-radius: 6px; width: 100%; margin: 0; font-weight: bold; font-size: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    ⚡ 開始必考題挑戰測驗 (隨機40題)
+                </button>
+            </div>
+        </div>
+        <div id="high-freq-results-count" style="font-size: 0.9rem; font-weight: bold; color: var(--primary); margin-bottom: 10px;">計算中...</div>
+        <div id="high-freq-list-container" style="max-height: 55vh; overflow-y: auto; padding-right: 5px;"></div>
     </div>
     
     <div id="screen-menu" class="screen active">
@@ -663,10 +674,6 @@
     function showScreen(screenId) {
         // 先將所有畫面上具有 screen 類別的區塊都移除 active
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        
-        // 額外確保我們新加的頁面也被關閉
-        const highFreqScreen = document.getElementById('screen-high-freq');
-        if (highFreqScreen) highFreqScreen.classList.remove('active');
 
         // 讓目標頁面顯示出來
         const target = document.getElementById(screenId);
@@ -816,21 +823,29 @@
         const ySelect = document.getElementById('search-filter-year');
         const tSelect = document.getElementById('search-filter-term');
         const sSelect = document.getElementById('search-filter-subject');
-        if(!ySelect || !tSelect || !sSelect) return;
+        
+        // 🎯 連動初始化必考題庫的科目選單
+        const hfSelect = document.getElementById('high-freq-filter-subject');
 
-        const years = [...new Set(db.map(item => item.year))].sort((a,b)=>b-a);
-        const terms = [...new Set(db.map(item => item.term))].sort((a,b)=>a-b);
+        if(ySelect && tSelect && sSelect) {
+            const years = [...new Set(db.map(item => item.year))].sort((a,b)=>b-a);
+            const terms = [...new Set(db.map(item => item.term))].sort((a,b)=>a-b);
 
-        ySelect.innerHTML = '<option value="all">-- 年份不限 --</option>';
-        years.forEach(y => { ySelect.innerHTML += `<option value="${y}">${y}年</option>`; });
+            ySelect.innerHTML = '<option value="all">-- 年份不限 --</option>';
+            years.forEach(y => { ySelect.innerHTML += `<option value="${y}">${y}年</option>`; });
 
-        tSelect.innerHTML = '<option value="all">-- 次數不限 --</option>';
-        terms.forEach(t => { tSelect.innerHTML += `<option value="${t}">第 ${t}次</option>`; });
+            tSelect.innerHTML = '<option value="all">-- 次數不限 --</option>';
+            terms.forEach(t => { tSelect.innerHTML += `<option value="${t}">第 ${t}次</option>`; });
 
-        sSelect.innerHTML = '<option value="all">-- 科目不限 --</option>';
-        for(let key in SUBJECT_NAMES) { sSelect.innerHTML += `<option value="${key}">${SUBJECT_NAMES[key]}</option>`; }
+            sSelect.innerHTML = '<option value="all">-- 科目不限 --</option>';
+            for(let key in SUBJECT_NAMES) { sSelect.innerHTML += `<option value="${key}">${SUBJECT_NAMES[key]}</option>`; }
+        }
 
-        // 🎯 安全防護修正：確保手機端有抓到輸入框，才綁定即時搜尋監聽器，防止未載入時閃退當掉
+        if(hfSelect) {
+            hfSelect.innerHTML = '<option value="all">-- 全選所有必考科目 --</option>';
+            for(let key in SUBJECT_NAMES) { hfSelect.innerHTML += `<option value="${key}">${SUBJECT_NAMES[key]}</option>`; }
+        }
+
         const sInput = document.getElementById('search-input');
         if (sInput) {
             sInput.addEventListener('input', function(e) {
@@ -1036,44 +1051,87 @@
         renderStaticBankList();
     }
 
-    // 🔥 必考題庫（高頻題）渲染執行器 - 防卡死升級版
+    // 🍊 進入必考題庫頁面
     function renderHighFrequencyMenu() {
-        // 1. 切換顯示畫面
-        switchView('high-frequency-view'); 
+        showScreen('screen-high-freq');
         
-        const listContainer = document.getElementById('high-frequency-list');
-        if(!listContainer) return;
+        // 預設將必考科目下拉選單切回「全選」
+        const hfSelect = document.getElementById('high-freq-filter-subject');
+        if(hfSelect) hfSelect.value = 'all';
         
-        listContainer.innerHTML = '';
+        runHighFrequencySearch();
+    }
 
-        // 安全檢查：確保必考題庫裡面有題目
+    // 🍊 執行必考題庫篩選與渲染（高效防卡死版）
+    function runHighFrequencySearch() {
+        const listContainer = document.getElementById('high-freq-list-container');
+        const countLabel = document.getElementById('high-freq-results-count');
+        if(!listContainer) return;
+
+        listContainer.innerHTML = '';
+        
         if(!highFrequencyQuiz || highFrequencyQuiz.length === 0) {
+            if(countLabel) countLabel.innerText = "精選核心高頻題：共 0 題";
             listContainer.innerHTML = '<div style="text-align:center; padding:30px; color:var(--gray);">目前尚無自動彙整的高頻核心焦點題。</div>';
             return;
         }
 
-        // 2. 更新必考題庫畫面的總題數統計
-        const countEl = document.getElementById('high-frequency-count');
-        if(countEl) {
-            countEl.innerText = `精選核心高頻題：共 ${highFrequencyQuiz.length} 題`;
+        // 取得當前選定的必考科目
+        const hfSelectVal = document.getElementById('high-freq-filter-subject') ? document.getElementById('high-freq-filter-subject').value : 'all';
+
+        // 進行科目篩選
+        const filtered = highFrequencyQuiz.filter(item => {
+            return (hfSelectVal === 'all' || item.subject === hfSelectVal);
+        });
+
+        if(countLabel) {
+            countLabel.innerText = `精選核心高頻題：共 ${filtered.length} 題`;
         }
 
-        // 🔥 核心防卡死鎖：限制首批只渲染前 50 題，避免幾百題同時載入榨乾記憶體
+        if(filtered.length === 0) {
+            listContainer.innerHTML = '<div style="text-align:center; padding:30px; color:var(--gray);">此科目下無高頻必考題。</div>';
+            return;
+        }
+
+        // 🔥 防卡死防護鎖：限制畫面上最多先顯示前 50 題
         const MAX_RENDER = 50;
-        const displayList = highFrequencyQuiz.slice(0, MAX_RENDER);
-        
-        if (highFrequencyQuiz.length > MAX_RENDER) {
+        const displayList = filtered.slice(0, MAX_RENDER);
+
+        if (filtered.length > MAX_RENDER) {
             listContainer.innerHTML += `
-                <div style="background: #e2f0fe; color: #155724; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem; font-weight: bold; text-align: center; border: 1px solid #b8daff;">
-                    💡 提示：必考核心題庫龐大 (共 ${highFrequencyQuiz.length} 題)，系統已為您預先載入前 ${MAX_RENDER} 題。<br>建議您多利用上方的篩選功能進行精準複習！
+                <div style="background: #e2f0fe; color: #155724; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85rem; font-weight: bold; text-align: center; border: 1px solid #b8daff;">
+                    💡 提示：符合條件的必考題較多 (共 ${filtered.length} 題)，系統已預先載入前 ${MAX_RENDER} 題。<br>您可以直接點擊上方橘色按鈕，開始本類別的隨機 40 題測驗！
                 </div>
             `;
         }
 
-        // 3. 渲染安全的數量
+        // 渲染 HTML 卡片
         displayList.forEach((item, idx) => {
             listContainer.innerHTML += generateStandardCardHTML(item, idx, true);
         });
+    }
+
+    // 🍊 修正：啟動高頻核心焦點題模擬測驗（同步過濾科目）
+    function startHighFrequencyQuiz() {
+        const hfSelectVal = document.getElementById('high-freq-filter-subject') ? document.getElementById('high-freq-filter-subject').value : 'all';
+        
+        // 根據當前選擇的科目去抽題
+        const pool = highFrequencyQuiz.filter(item => hfSelectVal === 'all' || item.subject === hfSelectVal);
+
+        if (pool.length === 0) {
+            alert("當前選取的科目內沒有必考題可以進行測驗！");
+            return;
+        }
+        
+        // 隨機抽 40 題（不足 40 題則全出）
+        currentQuiz = pool.sort(() => 0.5 - Math.random()).slice(0, 40);
+        currentSubject = hfSelectVal === 'all' ? "HIGH_FREQUENCY_ALL" : `HIGH_FREQUENCY_${hfSelectVal}`;
+        currentIndex = 0;
+        currentScore = 0;
+        wrongLog = [];
+        
+        showScreen('screen-quiz');
+        renderQuestion();
     }
 
     // --- 輔助解析常規純文字圖片路徑（防錯處理） ---

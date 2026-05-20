@@ -1032,6 +1032,7 @@
             <div style="font-size:0.8rem; font-weight:bold; background:#005f99; color:#ffffff !important; padding:4px 8px; border-radius:6px; line-height:1.4; display:inline-block; margin-bottom:8px;">
                 ${questionSourceText}
             </div>
+            <button style="background:${isBookmarked ? '#e6a23c' : '#28a745'}; color:white; border:none; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:0.8rem; font-weight:bold;" onclick="toggleBookmarkInline('${item.id}', this)">${bookmarkText}</button>
             <div>${item.q}</div>
         `;
 

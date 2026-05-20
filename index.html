@@ -354,7 +354,7 @@
 
         <div class="score-board" id="stats-container" style="margin-bottom: 20px;">
             <h4 style="margin: 0 0 10px 0;">📊 學習熟練度統計</h4>
-            <canvas id="masteryChart" style="max-height: 180px;"></canvas>
+            <canvas id="masteryChart" style="max-height: 220px;"></canvas>
         </div>
         
         <div class="mode-switch">
@@ -852,7 +852,7 @@
             <div class="question-card_wrong" style="background:var(--card-bg, #ffffff); padding:16px; border-radius:12px; margin-bottom:16px; border:1px solid #e0e0e0; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; gap:8px;">
                     <span style="font-size:0.8rem; font-weight:bold; background:#005f99; color:#ffffff !important; padding:4px 8px; border-radius:6px; line-height:1.4; display:inline-block;">
-                        📍 ${subjectName}<br>${item.year || ''}年 - 第${item.term || ''}次
+                        📍 ${subjectName}|${item.year || ''}年 - 第${item.term || ''}次
                     </span>
                     
                     <div style="display:flex; gap:6px; flex-shrink:0;">
@@ -1247,12 +1247,16 @@
         });
     }
 
-    // --- 圖表數據可視化控制器 ---
+    // --- 圖表數據可視化控制器（完美橫向優化版） ---
     function updateChart() {
         const ctx = document.getElementById('masteryChart');
         if(!ctx) return;
         
-        const labels = Object.values(SUBJECT_NAMES).map(name => name.split('-')[1] || name);
+        // 為了讓左側文字更乾淨、不被裁切，我們可以簡化或保留核心名稱
+        const labels = Object.values(SUBJECT_NAMES).map(name => {
+            return name.includes('-') ? name.split('-')[1] : name;
+        });
+        
         const totalCounts = Object.keys(SUBJECT_NAMES).map(key => db.filter(i => i.subject === key).length);
         const masteredCounts = Object.keys(SUBJECT_NAMES).map(key => masteryData[key] ? masteryData[key].length : 0);
         
@@ -1261,7 +1265,7 @@
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         
         chartInstance = new Chart(ctx, {
-            type: 'bar',
+            type: 'bar', // 保持 bar 類型
             data: {
                 labels: labels,
                 datasets: [
@@ -1269,25 +1273,49 @@
                         label: '已熟練題數',
                         data: masteredCounts,
                         backgroundColor: '#28a745',
-                        borderRadius: 4
+                        borderRadius: 4,
+                        barThickness: 10 // 控制長條圖的粗細，讓畫面更精緻
                     },
                     {
                         label: '科目總題數',
                         data: totalCounts,
                         backgroundColor: isDark ? '#444444' : '#e9ecef',
-                        borderRadius: 4
+                        borderRadius: 4,
+                        barThickness: 10
                     }
                 ]
             },
             options: {
+                indexAxis: 'y', // 🔥 關鍵核心：將 X 軸與 Y 軸對調，直接變成極具質感的橫向圖表！
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    x: { stacked: true, grid: { display: false }, ticks: { color: isDark ? '#aaa' : '#666', font: { size: 10 } } },
-                    y: { stacked: false, beginAtZero: true, ticks: { color: isDark ? '#aaa' : '#666', font: { size: 10 } } }
+                    x: { 
+                        stacked: false, // 讓長條併排或重疊對比
+                        beginAtZero: true, 
+                        ticks: { 
+                            color: isDark ? '#aaa' : '#666', 
+                            font: { size: 10 } 
+                        } 
+                    },
+                    y: { 
+                        stacked: true, 
+                        grid: { display: false }, 
+                        ticks: { 
+                            color: isDark ? '#fff' : '#333', 
+                            font: { size: 11, weight: 'bold' },
+                            autoSkip: false // 確保每個科目名稱都一定會顯示
+                        } 
+                    }
                 },
                 plugins: {
-                    legend: { labels: { color: isDark ? '#fff' : '#333', font: { size: 10 } } }
+                    legend: { 
+                        position: 'top', // 將圖例放在最上方
+                        labels: { 
+                            color: isDark ? '#fff' : '#333', 
+                            font: { size: 10 } 
+                        } 
+                    }
                 }
             }
         });

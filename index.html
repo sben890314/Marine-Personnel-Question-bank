@@ -489,7 +489,17 @@
 
     let masteryData = {}; 
     let bookmarks = JSON.parse(localStorage.getItem('marine_bookmarks')) || [];
-    let wrongStore = JSON.parse(localStorage.getItem('marine_wrong_store')) || [];
+    // --- 🛠️ 安全防爆升級：防止舊錯題格式損壞導致整個網頁掛點 ---
+    let wrongStore = [];
+    try {
+        const savedWrong = localStorage.getItem('marine_wrong_store');
+        wrongStore = savedWrong ? JSON.parse(savedWrong) : [];
+        if (!Array.isArray(wrongStore)) wrongStore = []; // 確保一定是陣列
+    } catch (e) {
+        console.error("❌ 偵測到本機錯題快取格式損壞，已自動重置修正:", e);
+        wrongStore = [];
+        localStorage.setItem('marine_wrong_store', JSON.stringify([]));
+    }
     let notesStore = JSON.parse(localStorage.getItem('marine_notes_store')) || {}; 
     
     let currentQuiz = [];
@@ -1186,45 +1196,65 @@
         if(!container) return;
         container.innerHTML = '';
         
+        // 確保讀取最新資料
+        try {
+            const savedWrong = localStorage.getItem('marine_wrong_store');
+            wrongStore = savedWrong ? JSON.parse(savedWrong) : [];
+        } catch(e) { wrongStore = []; }
+
         let targetList = (currentStaticMode === 'wrong') ? wrongStore : db.filter(item => bookmarks.includes(item.id.toString()) || bookmarks.includes(Number(item.id)));
         
-        if (targetList.length === 0) {
-            container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--gray);">目前此區域空空如也喔！</div>`;
-            document.getElementById('quiz-action-zone').style.display = 'none';
+        if (!targetList || targetList.length === 0) {
+            container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--gray); font-size:1rem;">目前此區域空空如也喔！</div>`;
+            if(document.getElementById('quiz-action-zone')) {
+                document.getElementById('quiz-action-zone').style.display = 'none';
+            }
             return;
         }
-        document.getElementById('quiz-action-zone').style.display = 'block';
+        
+        if(document.getElementById('quiz-action-zone')) {
+            document.getElementById('quiz-action-zone').style.display = 'block';
+        }
 
         targetList.forEach((item, listIdx) => {
+            if (!item) return; // 防呆
             const card = document.createElement('div');
             card.className = 'question-card_wrong';
+            card.style.background = 'var(--card-bg)';
+            card.style.padding = '15px';
+            card.style.borderRadius = '8px';
+            card.style.marginBottom = '15px';
+            card.style.border = '1px solid #ddd';
+
             const savedNote = notesStore[item.id] || "";
             const subjectName = SUBJECT_NAMES[item.subject] || "綜合科目";
-            
             let staticImgHtml = `<img src="images/${item.id}.jpg" onerror="this.style.display='none'" style="max-width:100%; height:auto; margin:10px 0; border-radius:8px; display:block;">`;
 
+            // 🛠️ 徹底修復：補齊原本被截斷的 textarea 標籤結構與樣式
             card.innerHTML = `
-                <div class="card-header">
-                    <span class="badge">📍 ${subjectName} | ${item.year}年-${item.term}次</span>
-                    <button class="delete-btn" onclick="deleteFromSpecialBank('${item.id}', ${listIdx})">
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <span class="badge" style="font-size:0.8rem; font-weight:bold; color:var(--primary);">📍 ${subjectName} | ${item.year || ''}年-${item.term || ''}次</span>
+                    <button class="delete-btn" style="background:#ff4d4d; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:0.8rem;" onclick="deleteFromSpecialBank('${item.id}', ${listIdx})">
                         ${currentStaticMode === 'wrong' ? '🗑️ 移出錯題' : '❌ 取消收藏'}
                     </button>
                 </div>
-                <div class="question-text"><strong>${item.q}</strong></div>
+                <div class="question-text" style="font-weight:bold; margin-bottom:10px; color:var(--text);">${item.q}</div>
                 
                 ${staticImgHtml}
 
-                <ul class="options-list">
+                <ul class="options-list" style="list-style:none; padding-left:0; margin-bottom:12px;">
                     ${item.o.map((opt, oIdx) => {
                         const isCorrect = oIdx === item.a;
-                        const parsedOpt = parseOptionContent(opt);
-                        return `<li class="${isCorrect ? 'correct-opt' : ''}">${isCorrect ? '✅' : '⚪'} ${parsedOpt}</li>`;
+                        const parsedOpt = typeof parseOptionContent === 'function' ? parseOptionContent(opt) : opt;
+                        return `<li style="margin:6px 0; color: ${isCorrect ? 'var(--success, #28a745)' : 'inherit'}; font-weight: ${isCorrect ? 'bold' : 'normal'};">
+                            ${isCorrect ? '✅' : '⚪'} ${parsedOpt}
+                        </li>`;
                     }).join('')}
                 </ul>
                 <div style="margin-top:10px; background:rgba(0,0,0,0.02); padding:8px; border-radius:6px; border:1px dashed #ccc;">
                     <label style="font-size:0.8rem; font-weight:bold; color:var(--gray);">📝 考點記憶筆記：</label>
                     <textarea placeholder="點擊在此處直接輸入此題的記憶口訣或考點筆記..." 
-                              style="width:100%; height:38px; margin-top:4px; padding:5px; border-radius:4px; border:1px solid #ddd; font-family:inherit; font-size:0.85rem; background:var(--card-bg); color:var(--text); box-sizing:border-box;"
+                              style="width:100%; height:60px; margin-top:4px; padding:5px; border-radius:4px; border:1px solid #ddd; font-family:inherit; font-size:0.85rem; background:var(--card-bg); color:var(--text); box-sizing:border-box;"
                               oninput="saveCurrentNote('${item.id}', this.value)">${savedNote}</textarea>
                 </div>
             `;
@@ -1232,13 +1262,26 @@
         });
     }
 
-    function deleteFromSpecialBank(id, index) {
+    function deleteFromSpecialBank(id, listIdx) {
         if (currentStaticMode === 'wrong') {
-            wrongStore.splice(index, 1);
-            localStorage.setItem(WRONG_STORAGE_KEY, JSON.stringify(wrongStore));
+            // 移出錯題庫
+            wrongStore = wrongStore.filter(item => item.id.toString() !== id.toString());
+            localStorage.setItem('marine_wrong_store', JSON.stringify(wrongStore));
+            if(document.getElementById('total-wrong-count')) {
+                document.getElementById('total-wrong-count').innerText = wrongStore.length;
+            }
         } else {
-            toggleBookmark(id, null);
+            // 取消收藏
+            const index = bookmarks.indexOf(id.toString());
+            if (index !== -1) bookmarks.splice(index, 1);
+            const indexAlt = bookmarks.indexOf(Number(id));
+            if (indexAlt !== -1) bookmarks.splice(indexAlt, 1);
+            localStorage.setItem('marine_bookmarks', JSON.stringify(bookmarks));
+            if(document.getElementById('total-bookmark-count')) {
+                document.getElementById('total-bookmark-count').innerText = bookmarks.length;
+            }
         }
+        // 重新重繪目前面板
         renderStaticBankList();
     }
 

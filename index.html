@@ -524,6 +524,7 @@
     let currentSubject = "";
     let currentIndex = 0;
     let currentScore = 0; // 紀錄答對的真實題數
+    let currentQuestion = 0;
     let wrongLog = [];
     let chartInstance = null;
     let isNotesOnlyReview = false; 
@@ -1061,6 +1062,7 @@
             clickedBtn.style.backgroundColor = 'rgba(40,167,69,0.15)';
             clickedBtn.style.fontWeight = 'bold';
             currentScore+=2.5; // 真實計分累加
+            currentQuestion++;
             document.getElementById('q-score').innerText = `得分: ${currentScore} `;
 
             if(currentSubject && SUBJECT_NAMES[currentSubject]) {
@@ -1116,10 +1118,10 @@
         
         // 修正：確實將分子分母對接。分母為目前實際已做/回答的題目總數（防止提早結束時分母算錯）
         const totalAnsweredQuestions = currentIndex + 1;
-        const finalPercentageScore = currentQuiz.length > 0 ? Math.round((currentIndex / currentQuiz.length) * 100) : 0;
+        const finalPercentageScore = currentQuiz.length > 0 ? Math.round((currentQuestion / currentQuiz.length) * 100) : 0;
         
         // 更新結算畫面的分數顯示
-        document.getElementById('result-score-title').innerText = `測驗完成！答對 ${currentIndex} 題 / 共 ${currentQuiz.length} 題`;
+        document.getElementById('result-score-title').innerText = `測驗完成！答對 ${currentQuestion} 題 / 共 ${currentQuiz.length} 題`;
         document.getElementById('final-score').innerText = `${finalPercentageScore} 分`;
 
         let msg = "";

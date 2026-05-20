@@ -876,9 +876,9 @@
                 <ul style="list-style:none; padding-left:0; margin-bottom:15px;">
                     ${item.o.map((opt, oIdx) => {
                         const isCorrect = oIdx === item.a;
-                        const parsedOpt = typeof parseOptionContent === 'function' ? parseOptionContent(opt) : opt;
+                        // 🎯 移除複雜的行內正則解析，直接安全輸出選項文字
                         return `<li style="margin:6px 0; padding:10px; border-radius:6px; background:${isCorrect ? 'rgba(40,167,69,0.1)' : 'rgba(0,0,0,0.02)'}; color:${isCorrect ? '#28a745' : 'var(--text)'}; font-weight:${isCorrect ? 'bold' : 'normal'}; border:1px solid ${isCorrect ? '#28a745' : 'transparent'};">
-                            ${isCorrect ? '✅ 正確答案：' : '⚪ '} ${parsedOpt}
+                            ${isCorrect ? '✅ 正確答案：' : '⚪ '} ${opt}
                         </li>`;
                     }).join('')}
                 </ul>
@@ -893,7 +893,7 @@
         `;
     }
 
-    // 🔍 題庫瀏覽與搜尋渲染執行器（同步新視覺樣式）
+    // 🔍 題庫瀏覽與搜尋渲染執行器（高效防卡死升級版）
     function runSearch(query) {
         const listContainer = document.getElementById('search-results-list');
         if(!listContainer) return;
@@ -907,14 +907,25 @@
             pool = db.filter(item => notesStore.hasOwnProperty(item.id.toString()) || notesStore.hasOwnProperty(item.id));
         }
         
+        // 1. 先進行條件篩選
         const filtered = pool.filter(item => {
             const matchYear = (yFilter === 'all' || item.year.toString() === yFilter);
             const matchTerm = (tFilter === 'all' || item.term.toString() === tFilter);
             const matchSubject = (sFilter === 'all' || item.subject === sFilter);
-            const matchTxt = !query ? true : (item.q.includes(query) || item.o.some(opt => typeof opt === 'string' && opt.includes(query)));
+            
+            // 處理關鍵字搜尋
+            let matchTxt = true;
+            if (query) {
+                const qClean = query.trim().toLowerCase();
+                const qMatch = item.q && item.q.toLowerCase().includes(qClean);
+                const oMatch = item.o && item.o.some(opt => typeof opt === 'string' && opt.toLowerCase().includes(qClean));
+                matchTxt = qMatch || oMatch;
+            }
+            
             return matchYear && matchTerm && matchSubject && matchTxt;
         });
 
+        // 2. 更新畫面的題數統計
         document.getElementById('search-results-count').innerText = `找到 ${filtered.length} 題`;
         listContainer.innerHTML = '';
         
@@ -923,7 +934,20 @@
             return;
         }
 
-        filtered.forEach((item, idx) => {
+        // 🔥 核心防卡死鎖：如果篩選出來的題目太多（例如剛打開時有幾千題），只渲染前 50 題，避免瀏覽器當掉
+        const MAX_RENDER = 50;
+        const displayList = filtered.slice(0, MAX_RENDER);
+        
+        if (filtered.length > MAX_RENDER) {
+            listContainer.innerHTML += `
+                <div style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem; font-weight: bold; text-align: center;">
+                    ⚠️ 注意：符合條件的題目過多 (${filtered.length} 題)，系統僅預先顯示前 ${MAX_RENDER} 題。<br>請利用上方「關鍵字」或「科目」縮小範圍搜尋！
+                </div>
+            `;
+        }
+
+        // 3. 渲染安全的數量
+        displayList.forEach((item, idx) => {
             listContainer.innerHTML += generateStandardCardHTML(item, idx, true);
         });
     }

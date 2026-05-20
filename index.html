@@ -323,34 +323,6 @@
                 margin-top: 20px !important;
                 box-shadow: 0 4px 12px rgba(0, 95, 153, 0.3);
             }
-
-            .question-tag {
-                display: inline-block;
-                padding: 4px 8px;
-                border-radius: 6px;
-                font-size: 0.85rem;
-                font-weight: 500;
-                margin-bottom: 8px;
-                letter-spacing: 0.5px;
-                transition: background-color 0.3s, color 0.3s;
-                background-color: #f1f3f5;
-                color: #495057;
-                border: 1px solid #dee2e6;
-            }
-
-            @media (prefers-color-scheme: dark) {
-                .question-tag {
-                    background-color: #2b3035;
-                    color: #dee2e6;
-                    border: 1px solid #495057;
-                }
-            }
-
-            body.dark-mode .question-tag {
-                background-color: #2b3035;
-                color: #dee2e6;
-                border: 1px solid #495057;
-            }
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -387,7 +359,7 @@
         <div style="padding: 10px; background: var(--card-bg); border-radius: 10px; margin-bottom: 15px; border: 1px solid #ddd;">
             <button onclick="showMenu()" class="btn" style="margin-bottom: 15px; text-align: center;">⬅️ 返回主選單</button>
             <h3 style="margin: 0 0 5px 0;">🔥 歷屆核心高頻必考題庫</h3>
-            <p style="margin: 0 0 12px 0; font-size: 0.85rem; color: var(--gray);">系統已自動幫您分析 6,000+ 道考題，彙整出重複出現的萬年精華考點。</p>
+            <p style="margin: 0 0 12px 0; font-size: 0.85rem; color: var(--gray);">系統已自動幫您分析大題庫，彙整出重複出現的精華考點。</p>
 
             <div style="margin-bottom: 12px; border-top: 1px dashed #ccc; padding-top: 10px;">
                 <strong style="font-size: 0.85rem; display: block; margin-bottom: 5px;">📍 選擇必考科目：</strong>
@@ -484,7 +456,7 @@
         <div class="question-card">
             <div style="display:flex; justify-content:space-between; color:var(--gray); font-size:0.85rem; margin-bottom:10px;">
                 <span id="q-count">1/40</span>
-                <span id="q-score">得分: 0</span>
+                <span id="q-score">目前得分: 0 題</span>
             </div>
             <div style="width: 100%; background: rgba(0,0,0,0.05); height: 6px; border-radius: 3px; margin-bottom: 15px;">
                 <div id="quiz-progress-bar" style="width: 0%; background: #007bff; height: 100%; border-radius: 3px; transition: width 0.2s;"></div>
@@ -500,22 +472,18 @@
 
     <div id="wrong-questions-bank" class="screen">
         <button onclick="showMenu()" class="btn" style="margin-bottom: 15px; text-align: center;">⬅️ 返回主選單</button>
-        
         <h2 id="static-bank-title">📌 錯題重溫庫</h2>
-
         <div id="quiz-action-zone" style="margin-bottom: 20px;">
-            <button id="start-wrong-quiz-btn" class="btn-primary" style="margin: 0; width: 100%; padding: 15px; border-radius: 10px; font-size: 1.1rem;">⚡ 開始錯題加強挑戰測驗</button>
+            <button id="start-wrong-quiz-btn" class="btn-primary" style="margin: 0; width: 100%; padding: 15px; border-radius: 10px; font-size: 1.1rem;">⚡ 開始本庫加強挑戰測驗</button>
         </div>
-
         <hr>
-    
         <div id="wrong-list-container"></div>
     </div>
 
     <div id="screen-result" class="screen">
         <div class="score-board">
-            <div style="color:var(--gray);">本次測驗得分</div>
-            <div class="score-number" id="final-score">0</div>
+            <div style="color:var(--gray);" id="result-score-title">本次測驗得分</div>
+            <div class="score-number" id="final-score">0分</div>
             <div id="result-msg" style="font-weight:bold; margin-top:5px;"></div>
         </div>
 
@@ -555,7 +523,7 @@
     let currentQuiz = [];
     let currentSubject = "";
     let currentIndex = 0;
-    let currentScore = 0;
+    let currentScore = 0; // 紀錄答對的真實題數
     let wrongLog = [];
     let chartInstance = null;
     let isNotesOnlyReview = false; 
@@ -565,8 +533,6 @@
     const STORAGE_KEY = 'marine_quiz_mastery_v3';
 
     document.addEventListener('DOMContentLoaded', function() {
-        console.log("正在從背景下載大題庫...");
-
         fetch('quiz_db.json')
             .then(response => {
                 if (!response.ok) throw new Error("題庫檔案讀取失敗");
@@ -574,11 +540,7 @@
             })
             .then(data => {
                 db = data; 
-                console.log("🎉 題庫載入成功！總題數：" + db.length + " 題");
-
                 highFrequencyQuiz = extractDuplicateQuestions();
-                console.log("🔥 成功自動彙整歷屆核心高頻重複題共：" + highFrequencyQuiz.length + " 題");
-
                 loadMastery();
                 initHomepageFilterMenus(); 
                 initSearchFilterMenus();   
@@ -586,7 +548,7 @@
             })
             .catch(error => {
                 console.error("❌ 初始化出錯:", error);
-                alert("題庫載入失敗！請確認 quiz_db.json 是否與此網頁放置在同一個資料夾。");
+                alert("題庫載入失敗！請確認 quiz_db.json 是否正確放置。");
             });
 
         if(localStorage.getItem('theme') === 'dark') {
@@ -625,40 +587,6 @@
         });
 
         let processedList = Array.from(qMap.values());
-
-        const keywordGroups = [
-            ["三相", "三角形接線", "Y形接線", "有效功率", "對稱負載"],
-            ["艉軸", "重力櫃", "密封", "落差油壓"],
-            ["安全空氣", "控制系統", "氣動閥"],
-            ["結晶結構", "滑移面", "剪應力", "分力"],
-            ["滲碳", "擴散", "Fick", "費克定律"]
-        ];
-
-        processedList.forEach(item => {
-            keywordGroups.forEach(group => {
-                const hasKeyword = group.some(kw => item.q && item.q.includes(kw));
-                if (hasKeyword) {
-                    const mainTag = group[0]; 
-                    if (!item.tags.includes(mainTag)) item.tags.push(mainTag);
-                }
-            });
-        });
-
-        processedList.forEach(q1 => {
-            q1.allIds.forEach(id => {
-                if (id !== q1.id && !q1.relatedIds.includes(id)) q1.relatedIds.push(id);
-            });
-
-            if (q1.tags.length === 0) return;
-            processedList.forEach(q2 => {
-                if (q1.id !== q2.id && q1.tags.some(t => q2.tags.includes(t))) {
-                    if (!q1.relatedIds.includes(q2.id) && !q1.allIds.includes(q2.id)) {
-                        q1.relatedIds.push(q2.id); 
-                    }
-                }
-            });
-        });
-
         return processedList
             .filter(q => q.totalFrequency >= 2)
             .sort((a, b) => b.totalFrequency - a.totalFrequency);
@@ -676,7 +604,6 @@
 
     function saveMastery() { localStorage.setItem(STORAGE_KEY, JSON.stringify(masteryData)); }
     function saveBookmarks() { localStorage.setItem('marine_bookmarks', JSON.stringify(bookmarks)); }
-    function saveNotes() { localStorage.setItem('marine_notes_store', JSON.stringify(notesStore)); }
 
     function showScreen(screenId) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -694,7 +621,6 @@
     function toggleBookmarkInline(id, btnObj) {
         const idStr = id.toString();
         const idx = bookmarks.indexOf(idStr);
-        
         if (idx !== -1) {
             bookmarks.splice(idx, 1);
             btnObj.innerText = "📁 收藏此題";
@@ -705,13 +631,7 @@
             btnObj.style.backgroundColor = "#e6a23c";
         }
         saveBookmarks();
-        
-        if(document.getElementById('total-bookmark-count')) {
-            document.getElementById('total-bookmark-count').innerText = bookmarks.length;
-        }
-        if (currentStaticMode === 'bookmark' && document.getElementById('wrong-list-container') && document.getElementById('wrong-questions-bank').classList.contains('active')) {
-            renderStaticBankList();
-        }
+        if(document.getElementById('total-bookmark-count')) document.getElementById('total-bookmark-count').innerText = bookmarks.length;
     }
 
     function saveCurrentNote(qId, value) {
@@ -721,9 +641,7 @@
             notesStore[qId] = value;
         }
         localStorage.setItem('marine_notes_store', JSON.stringify(notesStore));
-        if(document.getElementById('total-notes-count')) {
-            document.getElementById('total-notes-count').innerText = Object.keys(notesStore).length;
-        }
+        if(document.getElementById('total-notes-count')) document.getElementById('total-notes-count').innerText = Object.keys(notesStore).length;
     }
 
     function initHomepageFilterMenus() {
@@ -738,16 +656,12 @@
         if(tGroup) tGroup.innerHTML = terms.map(t => `<label style="font-size:0.9rem; cursor:pointer;"><input type="checkbox" class="filter-term-cb" value="${t}" onchange="calculateFilteredCount()"> 第${t}次</label>`).join('');
 
         let subHtml = '<option value="all">🔍 包含所有輪機科目</option>';
-        for(let k in SUBJECT_NAMES) {
-            subHtml += `<option value="${k}">${SUBJECT_NAMES[k]}</option>`;
-        }
+        for(let k in SUBJECT_NAMES) { subHtml += `<option value="${k}">${SUBJECT_NAMES[k]}</option>`; }
         if(sSel) sSel.innerHTML = subHtml;
         calculateFilteredCount();
     }
 
     function calculateFilteredCount() {
-        if (!db || db.length === 0) return [];
-
         const checkedYears = Array.from(document.querySelectorAll('.filter-year-cb:checked')).map(cb => cb.value.toString());
         const checkedTerms = Array.from(document.querySelectorAll('.filter-term-cb:checked')).map(cb => cb.value.toString());
         const s = document.getElementById('filter-subject') ? document.getElementById('filter-subject').value : 'all';
@@ -759,9 +673,8 @@
             return matchYear && matchTerm && matchSubject;
         });
         
-        const countLabel = document.getElementById('filtered-count');
-        if (countLabel) {
-            countLabel.innerText = `篩選出 ${filtered.length} 題`;
+        if (document.getElementById('filtered-count')) {
+            document.getElementById('filtered-count').innerText = `篩選出 ${filtered.length} 題`;
         }
         return filtered;
     }
@@ -801,6 +714,7 @@
             alert("目前庫內沒有可以進行測驗的題目喔！");
             return;
         }
+        // 抓取該特定題目池，最多抽 40 題進行挑戰
         currentQuiz = list.sort(() => 0.5 - Math.random()).slice(0, 40);
         currentSubject = "SPECIAL_BANK_MODE";
         currentIndex = 0;
@@ -834,27 +748,19 @@
         if(ySelect && tSelect && sSelect) {
             const years = [...new Set(db.map(item => item.year))].filter(Boolean).sort((a,b)=>b-a);
             const terms = [...new Set(db.map(item => item.term))].filter(Boolean).sort((a,b)=>a-b);
-
             ySelect.innerHTML = '<option value="all">-- 年份不限 --</option>';
             years.forEach(y => { ySelect.innerHTML += `<option value="${y}">${y}年</option>`; });
-
             tSelect.innerHTML = '<option value="all">-- 次數不限 --</option>';
             terms.forEach(t => { tSelect.innerHTML += `<option value="${t}">第 ${t}次</option>`; });
-
             sSelect.innerHTML = '<option value="all">-- 科目不限 --</option>';
             for(let key in SUBJECT_NAMES) { sSelect.innerHTML += `<option value="${key}">${SUBJECT_NAMES[key]}</option>`; }
         }
-
         if(hfSelect) {
             hfSelect.innerHTML = '<option value="all">-- 全選所有必考科目 --</option>';
             for(let key in SUBJECT_NAMES) { hfSelect.innerHTML += `<option value="${key}">${SUBJECT_NAMES[key]}</option>`; }
         }
-
-        const sInput = document.getElementById('search-input');
-        if (sInput) {
-            sInput.oninput = function(e) {
-                runSearch(e.target.value);
-            };
+        if (document.getElementById('search-input')) {
+            document.getElementById('search-input').oninput = function(e) { runSearch(e.target.value); };
         }
     }
 
@@ -909,23 +815,17 @@
         `;
     }
 
-    function triggerSearchFromFilters() {
-        const kw = document.getElementById('search-input').value;
-        runSearch(kw);
-    }
+    function triggerSearchFromFilters() { runSearch(document.getElementById('search-input').value); }
 
     function runSearch(keyword) {
         if (currentSearchTimeout) clearTimeout(currentSearchTimeout);
-
         const fYear = document.getElementById('search-filter-year').value;
         const fTerm = document.getElementById('search-filter-term').value;
         const fSub = document.getElementById('search-filter-subject').value;
         const cleanKw = keyword.trim().toLowerCase();
 
         let filtered = db;
-        if(isNotesOnlyReview) {
-            filtered = db.filter(q => notesStore[q.id] && notesStore[q.id].trim() !== "");
-        }
+        if(isNotesOnlyReview) { filtered = db.filter(q => notesStore[q.id] && notesStore[q.id].trim() !== ""); }
 
         filtered = filtered.filter(item => {
             if (fYear !== 'all' && String(item.year) !== fYear) return false;
@@ -964,9 +864,7 @@
         }
 
         if(document.getElementById('start-wrong-quiz-btn')) document.getElementById('start-wrong-quiz-btn').style.display = 'block';
-        list.forEach((item, idx) => {
-            container.innerHTML += generateStandardCardHTML(item, idx, false);
-        });
+        list.forEach((item, idx) => { container.innerHTML += generateStandardCardHTML(item, idx, false); });
     }
 
     function deleteFromSpecialBank(qId, idx) {
@@ -986,16 +884,13 @@
         currentStaticMode = mode;
         showScreen('wrong-questions-bank');
         const titleObj = document.getElementById('static-bank-title');
-        if (titleObj) {
-            titleObj.innerText = (mode === 'wrong') ? "📌 歷屆錯題加強重溫庫" : "⭐ 我的精選收藏題庫";
-        }
+        if (titleObj) { titleObj.innerText = (mode === 'wrong') ? "📌 歷屆錯題加強重溫庫" : "⭐ 我的精選收藏題庫"; }
         renderStaticBankList();
     }
 
     function renderHighFrequencyMenu() {
         showScreen('screen-high-freq');
-        const hfSelect = document.getElementById('high-freq-filter-subject');
-        if(hfSelect) hfSelect.value = 'all';
+        if(document.getElementById('high-freq-filter-subject')) document.getElementById('high-freq-filter-subject').value = 'all';
         runHighFrequencySearch();
     }
 
@@ -1011,12 +906,10 @@
     function startHighFrequencyQuiz() {
         const hfSelectVal = document.getElementById('high-freq-filter-subject') ? document.getElementById('high-freq-filter-subject').value : 'all';
         const pool = highFrequencyQuiz.filter(item => hfSelectVal === 'all' || item.subject === hfSelectVal);
-
         if (pool.length === 0) {
             alert("當前選取的科目內沒有必考題可以進行測驗！");
             return;
         }
-        
         currentQuiz = pool.sort(() => 0.5 - Math.random()).slice(0, 40);
         currentSubject = hfSelectVal === 'all' ? "HIGH_FREQUENCY_ALL" : `HIGH_FREQUENCY_${hfSelectVal}`;
         currentIndex = 0;
@@ -1059,20 +952,17 @@
     function renderListInBatches(items, containerElement, isFromSearchPage) {
         containerElement.innerHTML = '';
         if (!items || items.length === 0) return;
-
         const BATCH_SIZE = 20; 
         let indexPointer = 0;
 
         function renderNextBatch() {
             const fragment = document.createDocumentFragment();
             const nextBatch = items.slice(indexPointer, indexPointer + BATCH_SIZE);
-
             nextBatch.forEach((item, index) => {
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = generateStandardCardHTML(item, indexPointer + index, isFromSearchPage);
                 fragment.appendChild(tempDiv.firstElementChild);
             });
-
             containerElement.appendChild(fragment);
             indexPointer += BATCH_SIZE;
 
@@ -1123,8 +1013,9 @@
         const subjectName = SUBJECT_NAMES[item.subject] || "綜合科目";
         const questionSourceText = `📍 ${subjectName} | ${item.year || ''}年第${item.term || ''}次 Q${cleanQuizNum}`;
 
-        document.getElementById('q-count').innerText = `${currentIndex + 1} / ${currentQuiz.length}`;
-        document.getElementById('q-score').innerText = `得分: ${currentScore}`;
+        document.getElementById('q-count').innerText = `${currentIndex + 1} / ${currentQuiz.length} 題`;
+        // 精準同步顯示目前答對的題數
+        document.getElementById('q-score').innerText = `目前得分: ${currentScore} 題`;
 
         const progressPercent = ((currentIndex) / currentQuiz.length) * 100;
         if(document.getElementById('quiz-progress-bar')) {
@@ -1161,6 +1052,7 @@
         const item = currentQuiz[currentIndex];
         const allBtns = document.querySelectorAll('.option-btn');
 
+        // 防止使用者重複點擊選項重複算分
         allBtns.forEach(btn => btn.disabled = true);
         const isCorrect = (userAnswerIdx === item.a);
 
@@ -1168,10 +1060,9 @@
             clickedBtn.style.borderColor = 'var(--success)';
             clickedBtn.style.backgroundColor = 'rgba(40,167,69,0.15)';
             clickedBtn.style.fontWeight = 'bold';
-            currentScore++;
-            document.getElementById('q-score').innerText = `得分: ${currentScore}`;
+            currentScore++; // 真實計分累加
+            document.getElementById('q-score').innerText = `目前得分: ${currentScore} 題`;
 
-            // 當練習正確時，將該題加入至熟練紀錄中
             if(currentSubject && SUBJECT_NAMES[currentSubject]) {
                 if(!masteryData[currentSubject]) masteryData[currentSubject] = [];
                 if(!masteryData[currentSubject].includes(item.id.toString())) {
@@ -1222,12 +1113,18 @@
 
     function showResult() {
         showScreen('screen-result');
-        const finalScore = currentQuiz.length > 0 ? Math.round((currentScore / currentQuiz.length) * 100) : 0;
-        document.getElementById('final-score').innerText = finalScore;
+        
+        // 修正：確實將分子分母對接。分母為目前實際已做/回答的題目總數（防止提早結束時分母算錯）
+        const totalAnsweredQuestions = currentIndex + 1;
+        const finalPercentageScore = totalAnsweredQuestions > 0 ? Math.round((currentScore / totalAnsweredQuestions) * 100) : 0;
+        
+        // 更新結算畫面的分數顯示
+        document.getElementById('result-score-title').innerText = `測驗完成！答對 ${currentScore} 題 / 共 ${totalAnsweredQuestions} 題`;
+        document.getElementById('final-score').innerText = `${finalPercentageScore} 分`;
 
         let msg = "";
-        if(finalScore >= 80) msg = "🎉 太棒了！您已經掌握此科目的核心觀念！";
-        else if(finalScore >= 60) msg = "👍 及格了！持續努力，衝刺高分！";
+        if(finalPercentageScore >= 80) msg = "🎉 太棒了！您已經掌握此科目的核心觀念！";
+        else if(finalPercentageScore >= 60) msg = "👍 及格了！持續努力，衝刺高分！";
         else msg = "💪 沒關係，多檢討幾次錯題，進步會非常快！";
         document.getElementById('result-msg').innerText = msg;
 
@@ -1299,31 +1196,17 @@
                 maintainAspectRatio: false,
                 scales: {
                     x: { 
-                        stacked: false, 
                         beginAtZero: true, 
-                        ticks: { 
-                            color: isDark ? '#aaa' : '#666', 
-                            font: { size: 10 } 
-                        } 
+                        ticks: { color: isDark ? '#aaa' : '#666', font: { size: 10 } } 
                     },
                     y: { 
                         stacked: true, 
                         grid: { display: false }, 
-                        ticks: { 
-                            color: isDark ? '#fff' : '#333', 
-                            font: { size: 11, weight: 'bold' },
-                            autoSkip: false 
-                        } 
+                        ticks: { color: isDark ? '#fff' : '#333', font: { size: 11, weight: 'bold' }, autoSkip: false } 
                     }
                 },
                 plugins: {
-                    legend: { 
-                        position: 'top', 
-                        labels: { 
-                            color: isDark ? '#fff' : '#333', 
-                            font: { size: 10 } 
-                        } 
-                    }
+                    legend: { position: 'top', labels: { color: isDark ? '#fff' : '#333', font: { size: 10 } } }
                 }
             }
         });

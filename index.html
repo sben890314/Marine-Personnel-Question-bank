@@ -526,13 +526,16 @@
                 db = data; 
                 console.log("🎉 題庫載入成功！總題數：" + db.length + " 題");
                 
-                // 🛠️ 新增：自動分析抓出大題庫內重複出現的高頻核心焦點題
+                // 🛠️ 自動分析抓出大題庫內重複出現的高頻核心焦點題
                 highFrequencyQuiz = extractDuplicateQuestions();
                 console.log("🔥 成功自動彙整歷屆核心高頻重複題共：" + highFrequencyQuiz.length + " 題");
                 
                 loadMastery();
                 initHomepageFilterMenus(); 
+                
+                // 🎯 核心修正：確保進到選單前，搜尋頁面的年份、次數、科目下拉選單都已經完整初始化完畢
                 initSearchFilterMenus();   
+                
                 renderMenu(); 
             })
             .catch(error => {
@@ -827,10 +830,13 @@
         sSelect.innerHTML = '<option value="all">-- 科目不限 --</option>';
         for(let key in SUBJECT_NAMES) { sSelect.innerHTML += `<option value="${key}">${SUBJECT_NAMES[key]}</option>`; }
 
-        // 手機端輸入法優化：即時監聽文字輸入
-        document.getElementById('search-input').addEventListener('input', function(e) {
-            runSearch(e.target.value);
-        });
+        // 🎯 安全防護修正：確保手機端有抓到輸入框，才綁定即時搜尋監聽器，防止未載入時閃退當掉
+        const sInput = document.getElementById('search-input');
+        if (sInput) {
+            sInput.addEventListener('input', function(e) {
+                runSearch(e.target.value);
+            });
+        }
     }
 
     // 🎨 統一視覺核心：不論是搜尋瀏覽、還是錯題重溫，都共用同一個標準高階 HTML 結構外觀

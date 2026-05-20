@@ -1017,6 +1017,8 @@
         const cleanQuizNum = matchNum ? parseInt(matchNum[0], 10) : (currentIndex + 1);
         const subjectName = SUBJECT_NAMES[item.subject] || "綜合科目";
         const questionSourceText = `📍 ${subjectName} | ${item.year || ''}年第${item.term || ''}次 Q${cleanQuizNum}`;
+        const isBookmarked = bookmarks.includes(item.id.toString()) || bookmarks.includes(Number(item.id));
+        const bookmarkText = isBookmarked ? "⭐ 已收藏" : "📁 收藏此題";
 
         document.getElementById('q-count').innerText = `${currentIndex + 1} / ${currentQuiz.length} 題`;
         // 精準同步顯示目前答對的題數

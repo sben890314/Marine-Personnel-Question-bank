@@ -979,6 +979,11 @@
         `;
     }
 
+    function triggerSearchFromFilters() {
+        const kw = document.getElementById('search-input').value;
+        runSearch(kw);
+    }
+
     // 🔍 題庫瀏覽與搜尋渲染執行器（高效防卡死升級版）
     function runSearch(keyword) {
         // 清除先前未完工的搜尋渲染計時器

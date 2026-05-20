@@ -402,7 +402,7 @@
 
 
         <div style="margin-bottom: 10px;">
-            <button onclick="openHighFreqLibrary()" class="btn" style="background-color: #ff6f00 !important; color: white; text-align: center; font-weight: bold; margin: 0; font-size: 1.1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <button onclick="renderHighFrequencyMenu()" class="btn" style="background-color: #ff6f00 !important; color: white; text-align: center; font-weight: bold; margin: 0; font-size: 1.1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 🔥 必考題庫
             </button>
         </div>
@@ -1036,25 +1036,43 @@
         renderStaticBankList();
     }
 
-    // --- 歷屆核心高頻必考題庫面板渲染 ---
-    function openHighFreqLibrary() {
-        showScreen('screen-high-freq');
-        const container = document.getElementById('high-freq-list-container');
-        const countLabel = document.getElementById('high-freq-results-count');
-        if(!container) return;
+    // 🔥 必考題庫（高頻題）渲染執行器 - 防卡死升級版
+    function renderHighFrequencyMenu() {
+        // 1. 切換顯示畫面
+        switchView('high-frequency-view'); 
         
-        container.innerHTML = '';
+        const listContainer = document.getElementById('high-frequency-list');
+        if(!listContainer) return;
+        
+        listContainer.innerHTML = '';
+
+        // 安全檢查：確保必考題庫裡面有題目
         if(!highFrequencyQuiz || highFrequencyQuiz.length === 0) {
-            if(countLabel) countLabel.innerText = "找到 0 題";
-            container.innerHTML = '<div style="text-align:center; padding:30px; color:var(--gray);">尚未載入重複命題核心題數據</div>';
+            listContainer.innerHTML = '<div style="text-align:center; padding:30px; color:var(--gray);">目前尚無自動彙整的高頻核心焦點題。</div>';
             return;
         }
 
-        if(countLabel) countLabel.innerText = `精選出重複命題核心題共 ${highFrequencyQuiz.length} 題`;
+        // 2. 更新必考題庫畫面的總題數統計
+        const countEl = document.getElementById('high-frequency-count');
+        if(countEl) {
+            countEl.innerText = `精選核心高頻題：共 ${highFrequencyQuiz.length} 題`;
+        }
+
+        // 🔥 核心防卡死鎖：限制首批只渲染前 50 題，避免幾百題同時載入榨乾記憶體
+        const MAX_RENDER = 50;
+        const displayList = highFrequencyQuiz.slice(0, MAX_RENDER);
         
-        highFrequencyQuiz.forEach((item, idx) => {
-            // 高頻庫也完美套用標準統一卡片外觀
-            container.innerHTML += generateStandardCardHTML(item, idx, true);
+        if (highFrequencyQuiz.length > MAX_RENDER) {
+            listContainer.innerHTML += `
+                <div style="background: #e2f0fe; color: #155724; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem; font-weight: bold; text-align: center; border: 1px solid #b8daff;">
+                    💡 提示：必考核心題庫龐大 (共 ${highFrequencyQuiz.length} 題)，系統已為您預先載入前 ${MAX_RENDER} 題。<br>建議您多利用上方的篩選功能進行精準複習！
+                </div>
+            `;
+        }
+
+        // 3. 渲染安全的數量
+        displayList.forEach((item, idx) => {
+            listContainer.innerHTML += generateStandardCardHTML(item, idx, true);
         });
     }
 

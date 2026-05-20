@@ -1116,10 +1116,10 @@
         
         // 修正：確實將分子分母對接。分母為目前實際已做/回答的題目總數（防止提早結束時分母算錯）
         const totalAnsweredQuestions = currentIndex + 1;
-        const finalPercentageScore = currentQuiz.length > 0 ? Math.round((currentScore / currentQuiz.length) * 100) : 0;
+        const finalPercentageScore = currentQuiz.length > 0 ? Math.round((currentIndex / currentQuiz.length) * 100) : 0;
         
         // 更新結算畫面的分數顯示
-        document.getElementById('result-score-title').innerText = `測驗完成！答對 ${currentScore} 題 / 共 ${currentQuiz.length} 題`;
+        document.getElementById('result-score-title').innerText = `測驗完成！答對 ${currentIndex} 題 / 共 ${currentQuiz.length} 題`;
         document.getElementById('final-score').innerText = `${finalPercentageScore} 分`;
 
         let msg = "";

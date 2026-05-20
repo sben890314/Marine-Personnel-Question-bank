@@ -805,16 +805,10 @@
         }
 
         return
-        if (currentStaticMode === 'wrong') {
-        tag = "wrong-tag";
-        }
-        else {
-        tag = "source-tag"
-        }
         `
             <div class="question-card_wrong" style="background:var(--card-bg, #ffffff); padding:16px; border-radius:12px; margin-bottom:16px; border:1px solid #e0e0e0; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; gap:8px;">
-                    <span class="${tag}">📍 ${subjectName} | ${item.year || ''}年 第${item.term || ''}次 Q${cleanQuizNum}</span>
+                    <span class="source-tag">📍 ${subjectName} | ${item.year || ''}年 第${item.term || ''}次 Q${cleanQuizNum}</span>
                     <div style="display:flex; gap:6px; flex-shrink:0;">
                         <button style="background:${isBookmarked ? '#e6a23c' : '#28a745'}; color:white; border:none; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:0.8rem; font-weight:bold;" onclick="toggleBookmarkInline('${item.id}', this)">${bookmarkText}</button>
                         ${!isFromSearchPage ? `<button style="background:#ff4d4d; color:white; border:none; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:0.8rem; font-weight:bold;" onclick="deleteFromSpecialBank('${item.id}', ${listIdx})">${currentStaticMode === 'wrong' ? '🗑️ 移出錯題' : '❌ 取消顯示'}</button>` : ''}

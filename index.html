@@ -886,7 +886,7 @@
             <div class="question-card_wrong" style="background:var(--card-bg, #ffffff); padding:16px; border-radius:12px; margin-bottom:16px; border:1px solid #e0e0e0; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; gap:8px;">
                     <span style="font-size:0.8rem; font-weight:bold; background:#005f99; color:#ffffff !important; padding:4px 8px; border-radius:6px; line-height:1.4; display:inline-block;">
-                        📍 ${subjectName}|${item.year || ''}年 - 第${item.term || ''}次
+                        📍 ${subjectName} | ${item.year || ''}年 - 第${item.term || ''}次 (第 ${item.id.toString().slice(-2)} 題)
                     </span>
                     
                     <div style="display:flex; gap:6px; flex-shrink:0;">
@@ -1220,42 +1220,55 @@
         renderQuestion();
     }
 
+    // 📝 渲染測驗題目 - 升級版（畫面上方加註詳細考題出處）
     function renderQuestion() {
-        if(currentIndex >= currentQuiz.length) {
-            finishQuiz();
+        if (currentIndex >= currentQuiz.length) {
+            showResult();
             return;
         }
+
         const item = currentQuiz[currentIndex];
-        document.getElementById('q-count').innerText = `${currentIndex + 1}/${currentQuiz.length}`;
+        
+        // --- 核心新增：解析出處與科目名稱 ---
+        const subjectName = SUBJECT_NAMES[item.subject] || "綜合科目";
+        const questionSourceText = `📍 ${subjectName} | ${item.year || ''}年 - 第${item.term || ''}次 (第 ${item.id.toString().slice(-2)} 題)`;
+
+        // 更新題數與得分進度條
+        document.getElementById('q-count').innerText = `${currentIndex + 1} / ${currentQuiz.length}`;
         document.getElementById('q-score').innerText = `得分: ${currentScore}`;
         
-        const bar = document.querySelectorAll('#session-bar');
-        if(bar && bar.length > 0) {
-            const pct = (currentIndex / currentQuiz.length) * 100;
-            bar.forEach(b => b.style.width = pct + '%');
-        }
+        const progressPercent = ((currentIndex) / currentQuiz.length) * 100;
+        document.getElementById('session-bar').style.width = `${progressPercent}%`;
 
-        // 題目文字與右上角行內星號快捷鍵
-        const isBookmarked = bookmarks.includes(item.id.toString()) || bookmarks.includes(Number(item.id));
-        document.getElementById('q-text').innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
-                <span>${item.q}</span>
-                <span style="cursor:pointer; font-size:1.3rem; user-select:none; padding:0 5px;" onclick="toggleBookmark('${item.id}', this)">${isBookmarked?'★':'☆'}</span>
+        // 🎯 在題目文字上方，動態插入一條精美的出處標籤
+        const qTextContainer = document.getElementById('q-text');
+        qTextContainer.innerHTML = `
+            <div style="font-size: 0.8rem; font-weight: bold; background: #e6f7ff; color: #005f99; padding: 4px 10px; border-radius: 6px; margin-bottom: 10px; display: inline-block; border: 1px solid #91d5ff;">
+                ${questionSourceText}
             </div>
-            <img src="images/${item.id}.jpg" onerror="this.style.display='none'" style="max-width:100%; height:auto; margin-top:10px; border-radius:8px; display:block;">
+            <div>${item.q}</div>
         `;
+
+        // 處理題目圖片
+        let imgHtml = `<img src="images/${item.id}.jpg" onerror="this.style.display='none'" style="max-width:100%; height:auto; margin:12px 0; border-radius:8px; display:block;">`;
         
-        const optDiv = document.getElementById('options-container');
-        optDiv.innerHTML = "";
+        // 清空舊選項並重新渲染
+        const optionsContainer = document.getElementById('options-container');
+        optionsContainer.innerHTML = '';
         
+        // 插入圖片（如果有）
+        optionsContainer.innerHTML += imgHtml;
+
+        // 渲染選項按鈕
         item.o.forEach((opt, oIdx) => {
             const btn = document.createElement('button');
-            btn.className = "btn btn-option";
-            btn.innerHTML = parseOptionContent(opt);
+            btn.className = 'option-btn';
+            btn.style = "width:100%; text-align:left; padding:12px; margin:6px 0; border-radius:8px; border:1px solid #ddd; background:var(--card-bg); color:var(--text); cursor:pointer; font-size:1rem; transition:all 0.2s;";
+            btn.innerText = ` ${String.fromCharCode(65 + oIdx)}. ${opt}`; // 加上 A, B, C, D 前綴
             btn.onclick = () => checkAnswer(oIdx, btn);
-            optDiv.appendChild(btn);
+            optionsContainer.appendChild(btn);
         });
-        
+
         document.getElementById('btn-next').style.display = 'none';
     }
 
@@ -1306,38 +1319,44 @@
 
     function quitQuiz() {
         if(confirm("確定要提早結束本次測驗並結算分數嗎？")) {
-            finishQuiz();
+            showResult();
         }
     }
 
-    function finishQuiz() {
+    // 📝 測驗結算畫面檢討清單優化（畫面上加入出處標籤）
+    function showResult() {
         showScreen('screen-result');
-        document.getElementById('final-score').innerText = currentScore;
         
-        const msg = document.getElementById('result-msg');
-        if(currentScore >= 60) {
-            msg.innerText = "🎉 恭喜及格！達到一等船員錄取標準！";
-            msg.style.color = "var(--success)";
-        } else {
-            msg.innerText = "❌ 仍需努力！多加複習錯題庫吧！";
-            msg.style.color = "var(--error)";
-        }
+        const finalScore = Math.round((currentScore / currentQuiz.length) * 100);
+        document.getElementById('final-score').innerText = finalScore;
         
-        const rList = document.getElementById('review-list');
-        rList.innerHTML = "";
-        
-        if(wrongLog.length === 0) {
-            rList.innerHTML = '<div style="text-align:center; color:var(--success); font-weight:bold; padding:15px;">💯 太完美了！本次測驗全對無錯題！</div>';
+        let msg = "";
+        if(finalScore >= 80) msg = "🎉 太棒了！您已經掌握此科目的核心觀念！";
+        else if(finalScore >= 60) msg = "👍 及格了！持續努力，衝刺高分！";
+        else msg = "💪 沒關係，多檢討幾次錯題，進步會非常快！";
+        document.getElementById('result-msg').innerText = msg;
+
+        const reviewList = document.getElementById('review-list');
+        reviewList.innerHTML = '';
+
+        if (wrongLog.length === 0) {
+            reviewList.innerHTML = '<div style="text-align:center; color:#28a745; font-weight:bold; padding:20px;">恭喜您！本次測驗全對，完美掌控！💯</div>';
             return;
         }
-        
-        wrongLog.forEach(item => {
+
+        // 渲染錯題清單
+        wrongLog.forEach((item, idx) => {
             const subjectName = SUBJECT_NAMES[item.subject] || "綜合科目";
-            rList.innerHTML += `
-                <div class="review-item">
-                    <div style="font-weight:bold; color:var(--error);">❌ ${item.q}</div>
-                    <div style="color:var(--success); margin-top:4px; font-weight:500;">💡 正確答案：${item.o[item.a]}</div>
-                    <div class="review-source">出處: ${subjectName} | ${item.year}年-第${item.term}次</div>
+            const sourceBadge = `📍 ${subjectName} | ${item.year || ''}年 - 第${item.term || ''}次 (第 ${item.id.toString().slice(-2)} 題)`;
+            
+            reviewList.innerHTML += `
+                <div style="padding:12px; border-bottom:1px solid #eee; margin-bottom:10px;">
+                    <div style="font-size:0.75rem; font-weight:bold; background:#fff1f0; color:#cf1322; padding:2px 6px; border-radius:4px; display:inline-block; margin-bottom:6px; border:1px solid #ffa39e;">
+                        ${sourceBadge}
+                    </div>
+                    <div style="font-weight:bold; margin-bottom:6px; color:var(--text);">${idx + 1}. ${item.q}</div>
+                    <div style="color:#28a745; font-size:0.9rem; font-weight:bold;">✅ 正確答案：${item.o[item.a]}</div>
+                    <div style="color:#dc3545; font-size:0.9rem; opacity:0.8;">❌ 您的回答：${item.o[item.userAnswer]}</div>
                 </div>
             `;
         });

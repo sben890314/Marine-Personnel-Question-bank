@@ -856,6 +856,9 @@
 
     // 🎨 統一視覺核心：升級版 - 支援必考題庫顯示重複出題次數與年份次數題號
     function generateStandardCardHTML(item, listIdx, isFromSearchPage) {
+        const idStr = item.id.toString();
+        const matchNum = idStr.match(/\d+$/); // 抓取字串末尾的數字
+        const cleanQuizNum = matchNum ? parseInt(matchNum[0], 10) : (currentIndex + 1);
         const savedNote = notesStore[item.id] || "";
         const subjectName = SUBJECT_NAMES[item.subject] || "綜合科目";
         const isBookmarked = bookmarks.includes(item.id.toString()) || bookmarks.includes(Number(item.id));
@@ -886,8 +889,7 @@
             <div class="question-card_wrong" style="background:var(--card-bg, #ffffff); padding:16px; border-radius:12px; margin-bottom:16px; border:1px solid #e0e0e0; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; gap:8px;">
                     <span style="font-size:0.8rem; font-weight:bold; background:#005f99; color:#ffffff !important; padding:4px 8px; border-radius:6px; line-height:1.4; display:inline-block;">
-                        📍 ${subjectName} | ${item.year || ''}年 - 第${item.term || ''}次 (第 ${item.id.toString().slice(-2)} 題)
-                    </span>
+                        📍 ${subjectName} | ${item.year || ''}年 - 第${item.term || ''}次 Q ${cleanQuizNum}
                     
                     <div style="display:flex; gap:6px; flex-shrink:0;">
                         <button style="background:${isBookmarked ? '#e6a23c' : '#28a745'}; color:white; border:none; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:0.8rem; font-weight:bold;" 
@@ -1220,7 +1222,7 @@
         renderQuestion();
     }
 
-    // 📝 渲染測驗題目 - 升級版（畫面上方加註詳細考題出處）
+    // 📝 渲染測驗題目 - 修正題號與選項點擊機制
     function renderQuestion() {
         if (currentIndex >= currentQuiz.length) {
             showResult();
@@ -1229,9 +1231,13 @@
 
         const item = currentQuiz[currentIndex];
         
-        // --- 核心新增：解析出處與科目名稱 ---
+        // 🎯 修正題號顯示：利用正則表達式只抓出結尾的純數字，避免出現 "第 Q9 題"
+        const idStr = item.id.toString();
+        const matchNum = idStr.match(/\d+$/); // 抓取字串末尾的數字
+        const cleanQuizNum = matchNum ? parseInt(matchNum[0], 10) : (currentIndex + 1);
+
         const subjectName = SUBJECT_NAMES[item.subject] || "綜合科目";
-        const questionSourceText = `📍 ${subjectName} | ${item.year || ''}年 - 第${item.term || ''}次 (第 ${item.id.toString().slice(-2)} 題)`;
+        const questionSourceText = `📍 ${subjectName} | ${item.year || ''}年 - 第${item.term || ''}次 Q ${cleanQuizNum}`;
 
         // 更新題數與得分進度條
         document.getElementById('q-count').innerText = `${currentIndex + 1} / ${currentQuiz.length}`;
@@ -1240,7 +1246,7 @@
         const progressPercent = ((currentIndex) / currentQuiz.length) * 100;
         document.getElementById('session-bar').style.width = `${progressPercent}%`;
 
-        // 🎯 在題目文字上方，動態插入一條精美的出處標籤
+        // 插入出處標籤
         const qTextContainer = document.getElementById('q-text');
         qTextContainer.innerHTML = `
             <div style="font-size: 0.8rem; font-weight: bold; background: #e6f7ff; color: #005f99; padding: 4px 10px; border-radius: 6px; margin-bottom: 10px; display: inline-block; border: 1px solid #91d5ff;">
@@ -1252,64 +1258,81 @@
         // 處理題目圖片
         let imgHtml = `<img src="images/${item.id}.jpg" onerror="this.style.display='none'" style="max-width:100%; height:auto; margin:12px 0; border-radius:8px; display:block;">`;
         
-        // 清空舊選項並重新渲染
         const optionsContainer = document.getElementById('options-container');
         optionsContainer.innerHTML = '';
-        
-        // 插入圖片（如果有）
         optionsContainer.innerHTML += imgHtml;
 
         // 渲染選項按鈕
         item.o.forEach((opt, oIdx) => {
             const btn = document.createElement('button');
             btn.className = 'option-btn';
+            // 加上 data-idx 方便後續 checkAnswer 尋找對照
+            btn.setAttribute('data-idx', oIdx); 
             btn.style = "width:100%; text-align:left; padding:12px; margin:6px 0; border-radius:8px; border:1px solid #ddd; background:var(--card-bg); color:var(--text); cursor:pointer; font-size:1rem; transition:all 0.2s;";
-            btn.innerText = ` ${String.fromCharCode(65 + oIdx)}. ${opt}`; // 加上 A, B, C, D 前綴
+            btn.innerText = ` ${String.fromCharCode(65 + oIdx)}. ${opt}`;
             btn.onclick = () => checkAnswer(oIdx, btn);
             optionsContainer.appendChild(btn);
         });
 
+        // 預設將「跳下一題」按鈕隱藏，等點了答案再出來
         document.getElementById('btn-next').style.display = 'none';
     }
 
-    function checkAnswer(userAns, btnObj) {
+    // 📝 檢查答案核心邏輯 — 當下即時開牌反饋版
+    function checkAnswer(userAnswerIdx, clickedBtn) {
         const item = currentQuiz[currentIndex];
-        const options = document.getElementById('options-container').children;
+        const allBtns = document.querySelectorAll('.option-btn');
         
-        // 鎖定所有選項按鈕防止重複點擊
-        for(let i=0; i<options.length; i++) {
-            options[i].disabled = true;
-            if(i === item.a) options[i].classList.add('correct');
-        }
+        // 1. 鎖定所有選項按鈕，防止使用者連續重複點擊
+        allBtns.forEach(btn => btn.disabled = true);
         
-        if(userAns === item.a) {
-            currentScore += 2.5;
-            btnObj.classList.add('correct');
-            // 答對則將題目編號推進熟練度陣列（去重）
-            if(currentSubject !== "COMBINED_FILTER" && currentSubject !== "HIGH_FREQUENCY_MODE") {
-                if(!masteryData[item.subject]) masteryData[item.subject] = [];
-                if(!masteryData[item.subject].includes(item.id.toString())) {
-                    masteryData[item.subject].push(item.id.toString());
-                }
-            }
+        const isCorrect = (userAnswerIdx === item.a);
+        
+        if (isCorrect) {
+            // 答對：點擊的按鈕變綠色
+            clickedBtn.style.backgroundColor = "rgba(40, 167, 69, 0.2)";
+            clickedBtn.style.borderColor = "#28a745";
+            clickedBtn.style.color = "#28a745";
+            clickedBtn.style.fontWeight = "bold";
+            clickedBtn.innerHTML = "✅ " + clickedBtn.innerHTML;
+            currentScore++;
+            document.getElementById('q-score').innerText = `得分: ${currentScore}`;
         } else {
-            btnObj.classList.add('wrong');
+            // 答錯：點擊的按鈕變紅色，並且把「正確答案」撈出來變綠色
+            clickedBtn.style.backgroundColor = "rgba(220, 53, 69, 0.2)";
+            clickedBtn.style.borderColor = "#dc3545";
+            clickedBtn.style.color = "#dc3545";
+            clickedBtn.style.fontWeight = "bold";
+            clickedBtn.innerHTML = "❌ " + clickedBtn.innerHTML;
+            
+            // 把對的答案抓出來亮綠燈給使用者看
+            allBtns.forEach(btn => {
+                if (parseInt(btn.getAttribute('data-idx'), 10) === item.a) {
+                    btn.style.backgroundColor = "rgba(40, 167, 69, 0.15)";
+                    btn.style.borderColor = "#28a745";
+                    btn.style.color = "#28a745";
+                    btn.style.fontWeight = "bold";
+                    btn.innerHTML = "💡 正確答案在此：" + btn.innerHTML;
+                }
+            });
+            
+            // 記錄到本次錯題檢討中
+            item.userAnswer = userAnswerIdx;
             wrongLog.push(item);
             
-            // 答錯立即寫入全域錯題重溫庫
-            const alreadyInWrong = wrongStore.some(w => w.id.toString() === item.id.toString());
-            if(!alreadyInWrong) {
+            // 同步加入到全域的「錯題重溫資料庫」中
+            if (!wrongStore.some(w => w.id === item.id)) {
                 wrongStore.push(item);
                 localStorage.setItem(WRONG_STORAGE_KEY, JSON.stringify(wrongStore));
             }
-            
-            // 從熟練度中踢除此題
-            if(currentSubject !== "COMBINED_FILTER" && currentSubject !== "HIGH_FREQUENCY_MODE" && masteryData[item.subject]) {
-                masteryData[item.subject] = masteryData[item.subject].filter(id => id.toString() !== item.id.toString() && id !== Number(item.id));
-            }
         }
-        saveMastery();
-        document.getElementById('btn-next').style.display = 'block';
+        
+        // 2. 當下開牌後，秀出「➡️ 跳下一題」的按鈕讓使用者看清楚再前進
+        const nextBtn = document.getElementById('btn-next');
+        if (nextBtn) {
+            nextBtn.style.display = 'block';
+            nextBtn.innerText = (currentIndex === currentQuiz.length - 1) ? "🏁 看測驗結算結果" : "➡️ 前進下一題";
+        }
     }
 
     function nextQuestion() {
@@ -1346,8 +1369,11 @@
 
         // 渲染錯題清單
         wrongLog.forEach((item, idx) => {
+            const idStr = item.id.toString();
+            const matchNum = idStr.match(/\d+$/); // 抓取字串末尾的數字
+            const cleanQuizNum = matchNum ? parseInt(matchNum[0], 10) : (currentIndex + 1);
             const subjectName = SUBJECT_NAMES[item.subject] || "綜合科目";
-            const sourceBadge = `📍 ${subjectName} | ${item.year || ''}年 - 第${item.term || ''}次 (第 ${item.id.toString().slice(-2)} 題)`;
+            const sourceBadge = `📍 ${subjectName} | ${item.year || ''}年 - 第${item.term || ''}次 Q ${cleanQuizNum}`;
             
             reviewList.innerHTML += `
                 <div style="padding:12px; border-bottom:1px solid #eee; margin-bottom:10px;">

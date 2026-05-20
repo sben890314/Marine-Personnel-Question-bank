@@ -854,7 +854,7 @@
         }
     }
 
-    // 🎨 統一視覺核心：不論是搜尋瀏覽、還是錯題重溫，都共用同一個標準高階 HTML 結構外觀
+    // 🎨 統一視覺核心：升級版 - 支援必考題庫顯示重複出題次數與年份次數題號
     function generateStandardCardHTML(item, listIdx, isFromSearchPage) {
         const savedNote = notesStore[item.id] || "";
         const subjectName = SUBJECT_NAMES[item.subject] || "綜合科目";
@@ -862,6 +862,25 @@
         const bookmarkText = isBookmarked ? "⭐ 已收藏" : "📁 收藏此題";
         
         let imgHtml = `<img src="images/${item.id}.jpg" onerror="this.style.display='none'" style="max-width:100%; height:auto; margin:12px 0; border-radius:8px; display:block;">`;
+
+        // 🎯 核心新增：判斷如果是必考題庫（含有 totalFrequency 屬性），就組裝重複出題的歷史軌跡標籤
+        let highFreqBadgeHtml = "";
+        if (item.totalFrequency && item.totalFrequency >= 2) {
+            // 將歷史紀錄（例如：["111-1-Q18", "112-2-Q5"]）用逗號漂亮的串接起來
+            const historyLog = item.historyList ? item.historyList.join('、') : `${item.year}年第${item.term}次`;
+            
+            highFreqBadgeHtml = `
+                <div style="background: rgba(255, 111, 0, 0.1); border: 1px solid #ff6f00; color: #e65100; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; font-size: 0.85rem; line-height: 1.4;">
+                    <span style="background: #ff6f00; color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; margin-right: 6px;">
+                        🔥 核心必考
+                    </span>
+                    本題在歷屆共重複出現了 <strong style="font-size: 1rem; color: #d84315;">${item.totalFrequency}</strong> 次！
+                    <div style="margin-top: 4px; color: var(--text); opacity: 0.8; font-size: 0.8rem;">
+                        📅 歷史出題軌跡：${historyLog}
+                    </div>
+                </div>
+            `;
+        }
 
         return `
             <div class="question-card_wrong" style="background:var(--card-bg, #ffffff); padding:16px; border-radius:12px; margin-bottom:16px; border:1px solid #e0e0e0; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
@@ -884,6 +903,8 @@
                     </div>
                 </div>
                 
+                ${highFreqBadgeHtml}
+                
                 <div style="font-weight:bold; margin-bottom:12px; color:var(--text); font-size:1rem; line-height:1.5;">${item.q}</div>
                 
                 ${imgHtml}
@@ -891,7 +912,6 @@
                 <ul style="list-style:none; padding-left:0; margin-bottom:15px;">
                     ${item.o.map((opt, oIdx) => {
                         const isCorrect = oIdx === item.a;
-                        // 🎯 移除複雜的行內正則解析，直接安全輸出選項文字
                         return `<li style="margin:6px 0; padding:10px; border-radius:6px; background:${isCorrect ? 'rgba(40,167,69,0.1)' : 'rgba(0,0,0,0.02)'}; color:${isCorrect ? '#28a745' : 'var(--text)'}; font-weight:${isCorrect ? 'bold' : 'normal'}; border:1px solid ${isCorrect ? '#28a745' : 'transparent'};">
                             ${isCorrect ? '✅ 正確答案：' : '⚪ '} ${opt}
                         </li>`;

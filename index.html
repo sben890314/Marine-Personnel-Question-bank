@@ -1191,6 +1191,7 @@
         renderStaticBankList();
     }
 
+    // 🛠️ 修正版：錯題與收藏獨立管理面板渲染核心（補齊未閉合標籤與防錯）
     function renderStaticBankList() {
         const container = document.getElementById('wrong-list-container');
         if(!container) return;
@@ -1495,6 +1496,27 @@
             box.style.display = box.style.display === 'none' ? 'block' : 'none';
         }
     }
+
+    // 🩹 錯題庫專用無痛修復補丁（放最前面）
+    (function() {
+        const key = 'marine_wrong_store';
+        try {
+            const rawData = localStorage.getItem(key);
+            if (rawData) {
+                const parsed = JSON.parse(rawData);
+                // 如果原本有資料但不是陣列，或是根本是壞的
+                if (!Array.isArray(parsed)) {
+                    console.warn("⚠️ 錯題格式異常，已啟動局部修復。");
+                    localStorage.setItem(key, JSON.stringify([]));
+                }
+            }
+        } catch (e) {
+            // 如果連 JSON.parse 都直接炸掉，代表字串毀損，直接塞一個空的乾淨陣列進去
+            console.error("🩹 偵測到舊錯題字串損壞，已局部重置該欄位：", e);
+            localStorage.setItem(key, JSON.stringify([]));
+        }
+    })();
+    
 </script>
 </body>
 </html>

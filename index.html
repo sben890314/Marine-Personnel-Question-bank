@@ -305,6 +305,19 @@
             transition: background 0.2s, color 0.2s;
         }
 
+        .wrong-tag {
+            font-size: 0.8rem;
+            font-weight: bold;
+            background: var(--wrong-bg);
+            color: var(--wrong-text) !important;
+            border: 1px solid var(--wrong-border);
+            padding: 4px 8px;
+            border-radius: 6px;
+            line-height: 1.4;
+            display: inline-block;
+            transition: background 0.2s, color 0.2s;
+        }
+
         @media (max-width: 768px) {
             .container {
                 overflow-y: visible !important; 
@@ -775,6 +788,7 @@
         const subjectName = SUBJECT_NAMES[item.subject] || "綜合科目";
         const isBookmarked = bookmarks.includes(item.id.toString()) || bookmarks.includes(Number(item.id));
         const bookmarkText = isBookmarked ? "⭐ 已收藏" : "📁 收藏此題";
+        const tag = (currentStaticMode === 'wrong') ? "wrong-tag" : "source-tag";
 
         let imgHtml = `<img src="images/${item.id}.jpg" onerror="this.style.display='none'" style="max-width:100%; height:auto; margin:12px 0; border-radius:8px; display:block;">`;
 
@@ -790,10 +804,12 @@
             `;
         }
 
-        return `
+        return
+        
+        `
             <div class="question-card_wrong" style="background:var(--card-bg, #ffffff); padding:16px; border-radius:12px; margin-bottom:16px; border:1px solid #e0e0e0; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; gap:8px;">
-                    <span class="source-tag">📍 ${subjectName} | ${item.year || ''}年 第${item.term || ''}次 Q${cleanQuizNum}</span>
+                    <span class="${tag}">📍 ${subjectName} | ${item.year || ''}年 第${item.term || ''}次 Q${cleanQuizNum}</span>
                     <div style="display:flex; gap:6px; flex-shrink:0;">
                         <button style="background:${isBookmarked ? '#e6a23c' : '#28a745'}; color:white; border:none; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:0.8rem; font-weight:bold;" onclick="toggleBookmarkInline('${item.id}', this)">${bookmarkText}</button>
                         ${!isFromSearchPage ? `<button style="background:#ff4d4d; color:white; border:none; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:0.8rem; font-weight:bold;" onclick="deleteFromSpecialBank('${item.id}', ${listIdx})">${currentStaticMode === 'wrong' ? '🗑️ 移出錯題' : '❌ 取消顯示'}</button>` : ''}
@@ -1031,10 +1047,10 @@
 
         const qTextContainer = document.getElementById('q-text');
         qTextContainer.innerHTML = `
-            <div style="font-size:0.8rem; font-weight:bold; background:#005f99; color:#ffffff !important; padding:4px 8px; border-radius:6px; line-height:1.4; display:inline-block; margin-bottom:8px;">
-                ${questionSourceText}
+            <span class="source-tag">${questionSourceText}</span>
+            <div style="display:flex; gap:6px; flex-shrink:0;">
+                <button style="background:${isBookmarked ? '#e6a23c' : '#28a745'}; color:white; border:none; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:0.8rem; font-weight:bold;" onclick="toggleBookmarkInline('${item.id}', this)">${bookmarkText}</button>
             </div>
-            <button style="background:${isBookmarked ? '#e6a23c' : '#28a745'}; color:white; border:none; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:0.8rem; font-weight:bold;" onclick="toggleBookmarkInline('${item.id}', this)">${bookmarkText}</button>
             <div>${item.q}</div>
         `;
 
@@ -1154,9 +1170,7 @@
             
             reviewList.innerHTML += `
                 <div style="padding:12px; border-bottom:1px solid #eee; margin-bottom:10px;">
-                    <div style="font-size:0.75rem; font-weight:bold; background:#dc3545; color:#fff; padding:2px 6px; border-radius:4px; display:inline-block; margin-bottom:6px;">
-                        ${sourceBadge}
-                    </div>
+                    <span class="wrong-tag">${sourceBadge}</span>
                     <div style="font-weight:bold; margin-bottom:6px; color:var(--text);">${idx + 1}. ${item.q}</div>
                     <div style="color:#28a745; font-size:0.9rem; font-weight:bold;">✅ 正確答案：${item.o[item.a]}</div>
                     <div style="color:#dc3545; font-size:0.9rem; opacity:0.8;">❌ 您的回答：${item.o[item.userAnswer]}</div>
